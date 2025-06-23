@@ -47,12 +47,15 @@ func saveErrorPage(ctx context.Context, page int) {
 		log.Printf("Failed to save error page %d: %v", page, err)
 		return
 	}
+
 	if failedHTML != "" {
 		_ = os.WriteFile(fmt.Sprintf("error_page_%d.html", page), []byte(failedHTML), 0644)
 	}
+
 	if len(failedShot) > 0 {
 		_ = os.WriteFile(fmt.Sprintf("error_page_%d.png", page), failedShot, 0644)
 	}
+
 	if failedHTML == "" && len(failedShot) == 0 {
 		log.Printf("Warning: error_page_%d.* files are empty (session likely dead)", page)
 	}
@@ -109,9 +112,11 @@ func Search(query string, lr string) {
 	)
 	defer cancel()
 
+	//show log
 	ctx, cancel = chromedp.NewContext(ctx, chromedp.WithLogf(log.Printf))
 	defer cancel()
 
+	//abort process by timeout
 	ctx, cancel = context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
