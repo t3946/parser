@@ -117,7 +117,7 @@ func Search(query string, lr string) {
 	defer cancel()
 
 	//abort process by timeout
-	ctx, cancel = context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, timeOutSec)
 	defer cancel()
 
 	results := make([]SERPItem, 0)
@@ -137,7 +137,7 @@ func Search(query string, lr string) {
 		log.Fatalf("Failed to load page 1: %v", err)
 	}
 
-	for page := 1; page <= 10; page++ {
+	for page := 1; page <= maxPage; page++ {
 		if page > 1 {
 			script := fmt.Sprintf(`
 				(function(){
@@ -151,10 +151,12 @@ func Search(query string, lr string) {
 			`, page-1)
 
 			var linkClicked bool
+
 			err := chromedp.Run(ctx,
 				chromedp.Evaluate(script, &linkClicked),
 				chromedp.Sleep(2*time.Second),
 			)
+
 			if err != nil || !linkClicked {
 				log.Printf("Failed to navigate to page %d (link missing or click failed)", page)
 				saveErrorPage(ctx, page)
@@ -163,18 +165,22 @@ func Search(query string, lr string) {
 		}
 
 		var html string
+
 		err := chromedp.Run(ctx,
 			chromedp.WaitReady("#search-result", chromedp.ByID),
 			chromedp.OuterHTML("html", &html),
 		)
+
 		if err != nil {
 			log.Printf("Failed to fetch page %d: %v", page, err)
 			saveErrorPage(ctx, page)
 			continue
 		}
 
-		parsed := extractFromJS(ctx, (page-1)*10)
+		parsed := extractFromJS(ctx, (page-1)*maxPage)
 		results = append(results, parsed...)
+
+		//load next page delay
 		time.Sleep(time.Duration(rand.Intn(3000)+2000) * time.Millisecond)
 	}
 
