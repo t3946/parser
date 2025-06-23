@@ -1,3 +1,9 @@
+/**
+ * package browserCtl
+ *
+ * Browser Control. Package for downloading html pages.
+ */
+
 package browserCtl
 
 import (
@@ -116,7 +122,7 @@ func Search(query string, lr string) {
 	ctx, cancel = chromedp.NewContext(ctx, chromedp.WithLogf(log.Printf))
 	defer cancel()
 
-	//abort process by timeout
+	//end loading process by timeout
 	ctx, cancel = context.WithTimeout(ctx, timeOutSec)
 	defer cancel()
 
