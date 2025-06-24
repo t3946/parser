@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 	"math/rand"
-	browserCtl "parser/services/browserctl"
+	"parser/services/searchYandex"
 	"time"
 )
 
@@ -18,5 +18,5 @@ func main() {
 		log.Fatal("query is required")
 	}
 
-	browserCtl.Search(*queryPtr, *lrPtr)
+	searchYandex.Search(*queryPtr, *lrPtr)
 }
