@@ -431,7 +431,7 @@ func parseAdvancedSearchResults(resp *http.Response) ([]string, error) {
 		".serp-item a[href*='://']:not([href*='yandex.ru'])",
 		".Organic .OrganicTitle-Link",
 		".VanillaReact .OrganicTitle-Link",
-		"[data-cid] a[href^='http']:not([href*='yandex.ru/clck'])",
+		"[data-cid] a[href^='httpRequest']:not([href*='yandex.ru/clck'])",
 	}
 
 	for _, selector := range selectors {
@@ -472,7 +472,7 @@ func extractCleanURL(href string) string {
 	}
 
 	// Прямые ссылки
-	if strings.HasPrefix(href, "http") && !strings.Contains(href, "yandex.ru") {
+	if strings.HasPrefix(href, "httpRequest") && !strings.Contains(href, "yandex.ru") {
 		return href
 	}
 
