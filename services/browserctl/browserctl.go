@@ -25,14 +25,11 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("no-sandbox", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
 		chromedp.Flag("window-size", "1920,1080"),
 		chromedp.Flag("start-maximized", true),
-		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.Flag("enable-automation", false),
-		// chromedp.ProxyServer("http://proxy:port"),
 	)
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
@@ -44,7 +41,11 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 		cancelAlloc()
 	}
 
-	ctx, cancelTimeout := context.WithTimeout(ctx, TimeOutSec)
+	var cancelTimeout context.CancelFunc
+
+	if TimeOutSec > 0 {
+		ctx, cancelTimeout = context.WithTimeout(ctx, TimeOutSec)
+	}
 
 	cancelAll := func() {
 		cancelTimeout()

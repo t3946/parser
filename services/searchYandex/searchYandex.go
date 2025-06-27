@@ -2,19 +2,20 @@ package searchYandex
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/chromedp/chromedp"
 	"log"
 	"math/rand"
+	"net/url"
 	"os"
 	browserCtl "parser/services/browserctl"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// \Search Engine Results Page Item
+// \SearchPhrase Engine Results Page Item
 type SERPItem struct {
 	Pos    int    `json:"pos"`
 	URL    string `json:"url"`
@@ -23,7 +24,29 @@ type SERPItem struct {
 	Text   string `json:"text"`
 }
 
-const CaptchaError = "Captcha error"
+const CaptchaError string = "Captcha error"
+
+func getStartPageUrl() string {
+	return "https://yandex.ru/"
+}
+
+// GetSearchPageUrl формирует URL для поиска на Яндексе с заданным текстом, регионом и номером страницы.
+// Если номер страницы больше 0, добавляется параметр пагинации "p".
+// Возвращает готовую строку URL с корректно закодированными
+func GetSearchPageUrl(text string, lr string, page int) string {
+	pageUrl, _ := url.Parse("https://yandex.ru/search/")
+	params := url.Values{}
+	params.Add("text", text)
+	params.Add("lr", lr)
+
+	if page > 0 {
+		params.Add("p", strconv.Itoa(page))
+	}
+
+	pageUrl.RawQuery = params.Encode()
+
+	return pageUrl.String()
+}
 
 // loadPage загружает страницу по указанному URL с использованием переданного контекста.
 //
@@ -37,11 +60,13 @@ const CaptchaError = "Captcha error"
 //
 // Пример использования:
 //
-//	content, err := loadPage(ctx, "https://example.com")
+// content, err := loadPage(ctx, "https://example.com")
+//
 //	if err != nil {
 //	    log.Fatalf("Ошибка загрузки страницы: %v", err)
 //	}
-//	fmt.Println("Содержимое страницы:", content)
+//
+// fmt.Println("Содержимое страницы:", content)
 func loadPage(ctx context.Context, url string) (string, error) {
 	var locationHref string
 	var html string
@@ -56,6 +81,7 @@ func loadPage(ctx context.Context, url string) (string, error) {
 			&locationHref,
 		),
 		chromedp.OuterHTML("html", &html),
+		chromedp.Sleep(time.Second*1),
 	)
 
 	if err != nil {
@@ -69,76 +95,41 @@ func loadPage(ctx context.Context, url string) (string, error) {
 	return html, nil
 }
 
-func Search(query string, lr string) {
-	log.Printf("[INFO] Starting Yandex SERP fetch for query='%s' in region='%s'...", query, lr)
+func parsePage(html string) {
+	//раньше делалась эта хрень
+	//extractFromJS(ctx, (page-1)*browserCtl.MaxPage)
+	//todo: теперь надо заменить на краулер или иной модуль
+}
+
+func SearchPhrase(text string, lr string) {
+	log.Printf("[INFO] Starting Yandex SERP fetch for text='%s' in region='%s'...", text, lr)
+
+	//todo: надо посетить начальную страницу в начале сессии
 
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
 
-	//load keyword page
-	msid := generateMSID()
-	searchURL := fmt.Sprintf("https://yandex.ru/search/?text=%s&lr=%s&primary_reqid=%s", query, lr, msid)
-	_, err := loadPage(ctx, searchURL)
+	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0))
 
-	//handle error
-	if err != nil {
-		saveErrorPage(ctx, 1)
-		log.Fatalf("[ERROR] Failed to load page 1: %v", err)
-		return
-	}
+	if err.Error() == CaptchaError {
+		var res interface{}
 
-	results := make([]SERPItem, 0)
-
-	for page := 1; page <= browserCtl.MaxPage; page++ {
-		if page > 1 {
-			script := fmt.Sprintf(`
-				(function(){
-					const link = document.querySelector("a.Pager-Item[href*='&p=%d']");
-					if (link) {
-						link.click();
-						return true;
-					}
-					return false;
-				})()
-			`, page-1)
-
-			var linkClicked bool
-
-			err := chromedp.Run(ctx,
-				chromedp.Evaluate(script, &linkClicked),
-				chromedp.Sleep(2*time.Second),
-			)
-
-			if err != nil || !linkClicked {
-				log.Printf("Failed to navigate to page %d (link missing or click failed)", page)
-				saveErrorPage(ctx, page)
-				continue
-			}
-		}
-
-		var html string
-
-		err := chromedp.Run(ctx,
-			chromedp.WaitReady("#search-result", chromedp.ByID),
-			chromedp.OuterHTML("html", &html),
+		chromedp.Run(ctx,
+			chromedp.Evaluate("document.getElementById('js-button').click()", &res),
+			chromedp.Sleep(time.Second*10000),
 		)
-
-		if err != nil {
-			log.Printf("Failed to fetch page %d: %v", page, err)
-			saveErrorPage(ctx, page)
-			continue
-		}
-
-		parsed := extractFromJS(ctx, (page-1)*browserCtl.MaxPage)
-		results = append(results, parsed...)
-
-		//load next page delay
-		time.Sleep(time.Duration(rand.Intn(3000)+2000) * time.Millisecond)
+		//todo: use capsola
+		//big: document.querySelector('.AdvancedCaptcha-ImageWrapper img').src
+		//small: document.querySelector('.AdvancedCaptcha-SilhouetteTask img').src
+		//button: document.querySelector('.CaptchaButton-ProgressWrapper').click()
 	}
 
-	data, _ := json.MarshalIndent(results, "", "  ")
-	_ = os.WriteFile("results.json", data, 0644)
-	log.Printf("Saved %d results to results.json", len(results))
+	time.Sleep(time.Second * 3000)
+	for i := 1; i < browserCtl.MaxPage; i++ {
+
+	}
+
+	return
 }
 
 func generateMSID() string {
