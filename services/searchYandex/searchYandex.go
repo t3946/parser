@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"os"
 	browserCtl "parser/services/browserctl"
+	"parser/services/capsola"
+	"parser/services/geometry"
 	"strconv"
 	"strings"
 	"time"
@@ -101,6 +103,13 @@ func parsePage(html string) {
 	//todo: теперь надо заменить на краулер или иной модуль
 }
 
+var rect struct {
+	Left   float64 `json:"left"`
+	Top    float64 `json:"top"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
 func SearchPhrase(text string, lr string) {
 	log.Printf("[INFO] Starting Yandex SERP fetch for text='%s' in region='%s'...", text, lr)
 
@@ -113,15 +122,51 @@ func SearchPhrase(text string, lr string) {
 
 	if err.Error() == CaptchaError {
 		var res interface{}
+		var clickImageUrl string
+		var taskImageUrl string
 
 		chromedp.Run(ctx,
+			// click button "i am not a robot"
 			chromedp.Evaluate("document.getElementById('js-button').click()", &res),
-			chromedp.Sleep(time.Second*10000),
+			chromedp.Sleep(time.Second*5),
+			// todo: if captcha will no appear, this will throw error
+			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-ImageWrapper img').src", &clickImageUrl),
+			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-SilhouetteTask img').src", &taskImageUrl),
 		)
-		//todo: use capsola
-		//big: document.querySelector('.AdvancedCaptcha-ImageWrapper img').src
-		//small: document.querySelector('.AdvancedCaptcha-SilhouetteTask img').src
-		//button: document.querySelector('.CaptchaButton-ProgressWrapper').click()
+
+		//[start] get solution Smart Captcha
+		task_id := capsola.SmartCaptchaCreateTask(clickImageUrl, taskImageUrl)
+
+		log.Printf(task_id)
+
+		time.Sleep(time.Second * 1)
+
+		solution_coords := capsola.SmartCaptchaGetSolution(task_id)
+		//[end]
+
+		//[start] solve Smart Captcha
+		var rect geometry.Rectangle
+
+		chromedp.Run(ctx,
+			chromedp.EvaluateAsDevTools(`
+					(function(){
+						var el = document.querySelector('.AdvancedCaptcha-ImageWrapper img');
+						var r = el.getBoundingClientRect();
+						return {left: r.left, top: r.top, width: r.width, height: r.height};
+					})()
+				`, &rect),
+		)
+
+		for i := 0; i < len(solution_coords); i++ {
+			//todo: input solution
+
+			//submit solution
+			//chromedp.Run(ctx,
+			//	chromedp.Evaluate("document.querySelector('.CaptchaButton-ProgressWrapper').click()", &res),
+			//)
+		}
+		//[end]
+
 	}
 
 	time.Sleep(time.Second * 3000)

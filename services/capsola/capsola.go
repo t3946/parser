@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"parser/services/geometry"
 	"strconv"
 	"strings"
 )
@@ -34,7 +35,7 @@ func SmartCaptchaCreateTask(clickImageUrl string, taskImageUrl string) string {
 	return data.Response
 }
 
-func SmartCaptchaGetSolution(task_id string) []Point {
+func SmartCaptchaGetSolution(task_id string) []geometry.Point {
 	res, err := getResult(map[string]string{
 		"id": task_id,
 	})
@@ -50,7 +51,7 @@ func SmartCaptchaGetSolution(task_id string) []Point {
 	// [start] parse coords str
 	coordsStr := strings.Split(data.Response, ":")[1]
 	coordsStrPairs := strings.Split(coordsStr, ";")
-	coordsList := []Point{}
+	coordsList := []geometry.Point{}
 
 	for i := 0; i < len(coordsStrPairs); i++ {
 		pair := strings.Split(coordsStrPairs[i], ",")
@@ -58,7 +59,7 @@ func SmartCaptchaGetSolution(task_id string) []Point {
 		X, _ := strconv.ParseFloat(strings.Split(pair[0], "=")[1], 64)
 		Y, _ := strconv.ParseFloat(strings.Split(pair[1], "=")[1], 64)
 
-		point := Point{
+		point := geometry.Point{
 			X: X,
 			Y: Y,
 		}
