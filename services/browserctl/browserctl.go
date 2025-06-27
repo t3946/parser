@@ -27,8 +27,8 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
-		chromedp.Flag("window-size", "1920,1080"),
-		chromedp.Flag("start-maximized", true),
+		chromedp.Flag("window-size", "960,640"),
+		chromedp.Flag("start-maximized", false),
 		chromedp.Flag("enable-automation", false),
 	)
 
