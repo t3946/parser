@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -31,6 +32,42 @@ func SmartCaptchaCreateTask(clickImageUrl string, taskImageUrl string) string {
 	json.Unmarshal([]byte(res), &data)
 
 	return data.Response
+}
+
+func SmartCaptchaGetSolution(task_id string) []Point {
+	res, err := getResult(map[string]string{
+		"id": task_id,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var data createResponse
+
+	json.Unmarshal([]byte(res), &data)
+
+	// [start] parse coords str
+	coordsStr := strings.Split(data.Response, ":")[1]
+	coordsStrPairs := strings.Split(coordsStr, ";")
+	coordsList := []Point{}
+
+	for i := 0; i < len(coordsStrPairs); i++ {
+		pair := strings.Split(coordsStrPairs[i], ",")
+
+		X, _ := strconv.ParseFloat(strings.Split(pair[0], "=")[1], 64)
+		Y, _ := strconv.ParseFloat(strings.Split(pair[1], "=")[1], 64)
+
+		point := Point{
+			X: X,
+			Y: Y,
+		}
+
+		coordsList = append(coordsList, point)
+	}
+	// [end]
+
+	return coordsList
 }
 
 func getImageBase64(pathOrUrl string) string {
