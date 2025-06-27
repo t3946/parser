@@ -9,8 +9,11 @@ import (
 	"time"
 )
 
-func main() {
+func init() {
 	godotenv.Load()
+}
+
+func main() {
 	rand.Seed(time.Now().UnixNano())
 	queryPtr := flag.String("query", "", "SearchPhrase query (e.g., 'купить машину')")
 	lrPtr := flag.String("lr", "213", "Region code (e.g., 213 for Moscow)")

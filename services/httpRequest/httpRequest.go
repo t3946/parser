@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func Post(url string, options map[string]map[string]string) {
+func Post(url string, options map[string]map[string]string) (string, error) {
 	data, dataExists := options["data"]
 	headers, headersExists := options["headers"]
 
@@ -50,4 +50,6 @@ func Post(url string, options map[string]map[string]string) {
 	}
 
 	fmt.Println("Ответ сервера:", string(body))
+
+	return string(body), err
 }
