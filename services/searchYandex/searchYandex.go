@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	browserCtl "parser/services/browserctl"
+	"parser/services/httpRequest"
 	"strconv"
 	"strings"
 	"time"
@@ -104,7 +105,13 @@ func parsePage(html string) {
 func SearchPhrase(text string, lr string) {
 	log.Printf("[INFO] Starting Yandex SERP fetch for text='%s' in region='%s'...", text, lr)
 
-	log.Println(GenerateSession(text, lr))
+	session := GenerateSession(text, lr)
+	cookie_str := CookieToString(session.Cookie)
+	options := map[string]map[string]string{"header": {"cookie": cookie_str}}
+	url := GetSearchPageUrl(text, lr, 0)
+	html, _ := httpRequest.Get(url, options)
+
+	os.WriteFile("page.html", []byte(html), 0644)
 
 	time.Sleep(time.Second * 3000)
 

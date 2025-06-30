@@ -8,6 +8,23 @@ import (
 	"net/http"
 )
 
+func Get(url string, options map[string]map[string]string) (string, error) {
+	// send req
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Cookie", options["headers"]["cookie"])
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	// read res
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Ошибка чтения ответа: %v", err)
+	}
+
+	return string(body), err
+}
+
 func Post(url string, options map[string]map[string]string) (string, error) {
 	data, dataExists := options["data"]
 	headers, headersExists := options["headers"]

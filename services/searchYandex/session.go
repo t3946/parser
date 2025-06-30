@@ -9,11 +9,12 @@ import (
 	browserCtl "parser/services/browserctl"
 	"parser/services/capsola"
 	"parser/services/geometry"
+	"strings"
 	"time"
 )
 
 type Session struct {
-	Cookie string
+	Cookie []*network.Cookie
 }
 
 func GenerateSession(text string, lr string) Session {
@@ -82,13 +83,23 @@ func GenerateSession(text string, lr string) Session {
 	// Получение всех cookies
 	var cookies []*network.Cookie
 
-	err = chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+	chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		var err error
 		cookies, err = storage.GetCookies().Do(ctx)
 		return err
 	}))
 
 	return Session{
-		Cookie: cookies[0].Value,
+		Cookie: cookies,
 	}
+}
+
+func CookieToString(cookie []*network.Cookie) string {
+	var cookiePairs []string
+
+	for _, c := range cookie {
+		cookiePairs = append(cookiePairs, c.Name+"="+c.Value)
+	}
+
+	return strings.Join(cookiePairs, "; ")
 }
