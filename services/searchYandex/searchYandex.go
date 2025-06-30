@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
-	"log"
 	"net/url"
 	browserCtl "parser/services/browserctl"
 	"parser/services/httpRequest"
-	"parser/services/storage"
 	"strconv"
 	"strings"
 	"time"
@@ -92,6 +90,19 @@ func loadPage(ctx context.Context, url string) (string, error) {
 	return html, nil
 }
 
+func getHeaders() map[string]string {
+	return map[string]string{
+		"User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+		"Accept-Language":           "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+		"Connection":                "keep-alive",
+		"Upgrade-Insecure-Requests": "1",
+		"DNT":                       "1",
+		"Referer":                   "https://yandex.ru/",
+		"Accept-Encoding":           "gzip, deflate, br, zstd",
+	}
+}
+
 func ParsePage(html string, page int) []SERPItem {
 	doc, _ := goquery.NewDocumentFromReader(strings.NewReader(html))
 
@@ -116,30 +127,29 @@ func ParsePage(html string, page int) []SERPItem {
 	return result
 }
 
-func SearchPhrase(text string, lr string) {
-	log.Printf("[INFO] Starting Yandex SERP fetch for text='%s' in region='%s'...", text, lr)
+func SearchPhrase(text string, lr string, session Session) []SERPItem {
+	result := []SERPItem{}
 
-	session := GenerateSession(text, lr)
-	cookie_str := CookieToString(session.Cookie)
-
-	options := map[string]map[string]string{"header": {"cookie": cookie_str}}
-	url := GetSearchPageUrl(text, lr, 0)
-	html, err := httpRequest.Get(url, options)
-
-	if err != nil {
-		log.Println("html not loaded")
-		log.Println(err)
-	} else {
-		log.Println(options)
+	for page := 0; page < browserCtl.MaxPage; page++ {
+		url := GetSearchPageUrl(text, lr, 0)
+		headers := getHeaders()
+		headers["Cookie"] = CookieToString(session.Cookie)
+		options := map[string]map[string]string{"headers": headers}
+		html, _ := httpRequest.Get(url, options)
+		result = append(result, ParsePage(html, page)...)
 	}
 
-	storage.WriteFile("page.html", html)
+	return result
+}
 
-	time.Sleep(time.Second * 3000)
+func ParseKeywordsList(keywords []string, lr string) []SERPItem {
+	result := []SERPItem{}
+	session := GenerateSession(keywords[0], lr)
 
-	for i := 1; i < browserCtl.MaxPage; i++ {
-
+	for _, keyword := range keywords {
+		parsed := SearchPhrase(keyword, lr, session)
+		result = append(result, parsed...)
 	}
 
-	return
+	return result
 }
