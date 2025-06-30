@@ -73,6 +73,7 @@ func GenerateSession(text string, lr string) Session {
 			chromedp.MouseClickXY(solution_coords[3].X, solution_coords[3].Y),
 			chromedp.Sleep(time.Second),
 			chromedp.Evaluate("document.querySelector('.CaptchaButton-ProgressWrapper').click()", &res),
+			chromedp.WaitReady("body"),
 		)
 		//[end]
 	}
