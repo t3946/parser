@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
 	"log"
-	"math/rand"
 	"net/url"
-	"os"
 	browserCtl "parser/services/browserctl"
 	"parser/services/httpRequest"
 	"parser/services/storage"
@@ -27,10 +26,6 @@ type SERPItem struct {
 }
 
 const CaptchaError string = "Captcha error"
-
-func getStartPageUrl() string {
-	return "https://yandex.ru/"
-}
 
 // GetSearchPageUrl формирует URL для поиска на Яндексе с заданным текстом, регионом и номером страницы.
 // Если номер страницы больше 0, добавляется параметр пагинации "p".
@@ -97,10 +92,28 @@ func loadPage(ctx context.Context, url string) (string, error) {
 	return html, nil
 }
 
-func parsePage(html string) {
-	//раньше делалась эта хрень
-	//extractFromJS(ctx, (page-1)*browserCtl.MaxPage)
-	//todo: теперь надо заменить на краулер или иной модуль
+func ParsePage(html string, page int) []SERPItem {
+	doc, _ := goquery.NewDocumentFromReader(strings.NewReader(html))
+
+	result := []SERPItem{}
+	nodes := doc.Find("li.serp-item:not(:has(.AdvLabel-Text)):not([data-fast-name=\"images\"])")
+	nodes.Each(func(i int, node *goquery.Selection) {
+		aNode := node.Find("a.Link")
+		titleEl := node.Find(".OrganicTitleContentSpan")
+		textEl := node.Find(".OrganicTextContentSpan")
+		linkUrl, _ := aNode.Attr("href")
+		u, _ := url.Parse(linkUrl)
+
+		result = append(result, SERPItem{
+			Pos:    i + 1 + page*nodes.Length(),
+			URL:    u.String(),
+			Domain: u.Hostname(),
+			Title:  titleEl.Text(),
+			Text:   textEl.Text(),
+		})
+	})
+
+	return result
 }
 
 func SearchPhrase(text string, lr string) {
@@ -108,7 +121,7 @@ func SearchPhrase(text string, lr string) {
 
 	session := GenerateSession(text, lr)
 	cookie_str := CookieToString(session.Cookie)
-	log.Println("session got")
+
 	options := map[string]map[string]string{"header": {"cookie": cookie_str}}
 	url := GetSearchPageUrl(text, lr, 0)
 	html, err := httpRequest.Get(url, options)
@@ -129,76 +142,4 @@ func SearchPhrase(text string, lr string) {
 	}
 
 	return
-}
-
-func generateMSID() string {
-	timestamp := time.Now().UnixNano()
-	randPart := rand.Uint64()
-	dcs := []string{"klg", "vla", "msk", "sas", "iva", "ekb", "spb"}
-	dc := dcs[rand.Intn(len(dcs))]
-	n := rand.Intn(100)
-	return fmt.Sprintf("%d-%d-balancer-l7leveler-kubr-yp-%s-%d-BAL", timestamp, randPart, dc, n)
-}
-
-func saveErrorPage(ctx context.Context, page int) {
-	tempCtx, cancel := chromedp.NewContext(ctx)
-	defer cancel()
-
-	tempCtx, timeout := context.WithTimeout(tempCtx, 5*time.Second)
-	defer timeout()
-
-	var failedHTML string
-	var failedShot []byte
-	err := chromedp.Run(tempCtx,
-		chromedp.OuterHTML("html", &failedHTML),
-		chromedp.CaptureScreenshot(&failedShot),
-	)
-	if err != nil {
-		log.Printf("[ERROR] Failed to save error page %d: %v", page, err)
-		return
-	}
-
-	if failedHTML != "" {
-		_ = os.WriteFile(fmt.Sprintf("error_page_%d.html", page), []byte(failedHTML), 0644)
-	}
-
-	if len(failedShot) > 0 {
-		_ = os.WriteFile(fmt.Sprintf("error_page_%d.png", page), failedShot, 0644)
-	}
-
-	if failedHTML == "" && len(failedShot) == 0 {
-		log.Printf("Warning: error_page_%d.* files are empty (session likely dead)", page)
-	}
-}
-
-func extractFromJS(ctx context.Context, offset int) []SERPItem {
-	var raw []map[string]interface{}
-	err := chromedp.Run(ctx, chromedp.Evaluate(`Array.from(document.querySelectorAll('li.serp-item:not(:has(.AdvLabel-Text))')).map((el, i) => {
-	const a = el.querySelector('a.Link');
-	const titleEl = el.querySelector('.OrganicTitleContentSpan');
-	const textEl = el.querySelector('.OrganicTextContentSpan');
-	return {
-		pos: i + 1,
-		url: a?.href || '',
-		domain: a?.hostname || '',
-		title: titleEl?.innerText || '',
-		text: textEl?.innerText || '',
-	};
-})`, &raw))
-	if err != nil {
-		log.Printf("Evaluate error: %v", err)
-		return nil
-	}
-	var results []SERPItem
-	for _, r := range raw {
-		pos := offset + int(r["pos"].(float64))
-		results = append(results, SERPItem{
-			Pos:    pos,
-			URL:    r["url"].(string),
-			Domain: r["domain"].(string),
-			Title:  r["title"].(string),
-			Text:   r["text"].(string),
-		})
-	}
-	return results
 }
