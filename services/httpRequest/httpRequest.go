@@ -50,7 +50,7 @@ func readResponseBody(resp *http.Response) (string, error) {
 	return string(bodyBytes), nil
 }
 
-func Get(url string, options map[string]map[string]string) (string, error) {
+func Get(url string, options map[string]map[string]string) (string, *http.Response, error) {
 	// send req
 	req, _ := http.NewRequest("GET", url, nil)
 
@@ -68,7 +68,7 @@ func Get(url string, options map[string]map[string]string) (string, error) {
 		log.Fatalf("Ошибка чтения ответа: %v", err)
 	}
 
-	return body, err
+	return body, resp, err
 }
 
 func Post(url string, options map[string]map[string]string) (string, error) {
