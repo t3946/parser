@@ -48,7 +48,10 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	}
 
 	cancelAll := func() {
-		cancelTimeout()
+		if cancelTimeout != nil {
+			cancelTimeout()
+		}
+
 		cancel()
 	}
 

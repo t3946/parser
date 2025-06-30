@@ -5,7 +5,6 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/storage"
 	"github.com/chromedp/chromedp"
-	"log"
 	browserCtl "parser/services/browserctl"
 	"parser/services/capsola"
 	"parser/services/geometry"
@@ -31,16 +30,14 @@ func GenerateSession(text string, lr string) Session {
 		chromedp.Run(ctx,
 			// click button "i am not a robot"
 			chromedp.Evaluate("document.getElementById('js-button').click()", &res),
-			chromedp.Sleep(time.Second*5),
-			// todo: if captcha will no appear, this will throw error
+			chromedp.WaitVisible(".AdvancedCaptcha-ImageWrapper img"),
+			chromedp.WaitVisible(".AdvancedCaptcha-SilhouetteTask img"),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-ImageWrapper img').src", &clickImageUrl),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-SilhouetteTask img').src", &taskImageUrl),
 		)
 
 		//[start] get solution Smart Captcha
 		task_id := capsola.SmartCaptchaCreateTask(clickImageUrl, taskImageUrl)
-
-		log.Printf(task_id)
 
 		time.Sleep(time.Second * 1)
 

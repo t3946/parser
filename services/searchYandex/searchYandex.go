@@ -11,6 +11,7 @@ import (
 	"os"
 	browserCtl "parser/services/browserctl"
 	"parser/services/httpRequest"
+	"parser/services/storage"
 	"strconv"
 	"strings"
 	"time"
@@ -107,11 +108,19 @@ func SearchPhrase(text string, lr string) {
 
 	session := GenerateSession(text, lr)
 	cookie_str := CookieToString(session.Cookie)
+	log.Println("session got")
 	options := map[string]map[string]string{"header": {"cookie": cookie_str}}
 	url := GetSearchPageUrl(text, lr, 0)
-	html, _ := httpRequest.Get(url, options)
+	html, err := httpRequest.Get(url, options)
 
-	os.WriteFile("page.html", []byte(html), 0644)
+	if err != nil {
+		log.Println("html not loaded")
+		log.Println(err)
+	} else {
+		log.Println(options)
+	}
+
+	storage.WriteFile("page.html", html)
 
 	time.Sleep(time.Second * 3000)
 
