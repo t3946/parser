@@ -3,6 +3,6 @@ package browserCtl
 import "time"
 
 const (
-	MaxPage    = 1
+	MaxPage    = 10
 	TimeOutSec = 0 * time.Second
 )

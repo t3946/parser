@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/chromedp"
+	"log"
+	"math/rand"
 	"net/url"
 	browserCtl "parser/services/browserctl"
 	"parser/services/httpRequest"
@@ -23,7 +25,22 @@ type SERPItem struct {
 	Text   string `json:"text"`
 }
 
+type Stats struct {
+	TotalPages         int    `json:"total_pages"`
+	TotalCaptchaSolved int    `json:"total_captcha_solved"`
+	TimeSpend          string `json:"time_spend"`
+}
+
 const CaptchaError string = "Captcha error"
+
+func generateMSID() string {
+	timestamp := time.Now().UnixNano()
+	randPart := rand.Uint64()
+	dcs := []string{"klg", "vla", "msk", "sas", "iva", "ekb", "spb"}
+	dc := dcs[rand.Intn(len(dcs))]
+	n := rand.Intn(100)
+	return fmt.Sprintf("%d-%d-balancer-l7leveler-kubr-yp-%s-%d-BAL", timestamp, randPart, dc, n)
+}
 
 // GetSearchPageUrl формирует URL для поиска на Яндексе с заданным текстом, регионом и номером страницы.
 // Если номер страницы больше 0, добавляется параметр пагинации "p".
@@ -33,6 +50,7 @@ func GetSearchPageUrl(text string, lr string, page int) string {
 	params := url.Values{}
 	params.Add("text", text)
 	params.Add("lr", lr)
+	params.Add("msid", generateMSID())
 
 	if page > 0 {
 		params.Add("p", strconv.Itoa(page))
@@ -90,7 +108,25 @@ func loadPage(ctx context.Context, url string) (string, error) {
 	return html, nil
 }
 
-func getHeaders() map[string]string {
+func sleep(min, max float64) {
+	if min > max {
+		log.Fatalf("invalid arguments: min (%f) > max (%f)", min, max)
+	}
+
+	// Создаём локальный генератор с уникальным сидом
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	minInt := int(min * 10)
+	maxInt := int(max * 10)
+
+	durationTenths := r.Intn(maxInt-minInt+1) + minInt
+	duration := float64(durationTenths) / 10.0
+
+	log.Printf("Sleeping for %.1f seconds...", duration)
+	time.Sleep(time.Duration(duration * float64(time.Second)))
+}
+
+func GetHeaders() map[string]string {
 	return map[string]string{
 		"User-Agent":                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
 		"Accept":                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -127,29 +163,51 @@ func ParsePage(html string, page int) []SERPItem {
 	return result
 }
 
-func SearchPhrase(text string, lr string, session Session) []SERPItem {
+func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	result := []SERPItem{}
-
-	for page := 0; page < browserCtl.MaxPage; page++ {
-		url := GetSearchPageUrl(text, lr, 0)
-		headers := getHeaders()
-		headers["Cookie"] = CookieToString(session.Cookie)
-		options := map[string]map[string]string{"headers": headers}
-		html, _ := httpRequest.Get(url, options)
-		result = append(result, ParsePage(html, page)...)
-	}
-
-	return result
-}
-
-func ParseKeywordsList(keywords []string, lr string) []SERPItem {
-	result := []SERPItem{}
-	session := GenerateSession(keywords[0], lr)
+	solved_captcha_total := 0
+	session, solved_captcha := GenerateSession(keywords[0], lr)
+	solved_captcha_total += solved_captcha
+	startTime := time.Now()
+	totalPages := 0
 
 	for _, keyword := range keywords {
-		parsed := SearchPhrase(keyword, lr, session)
+		log.Printf("[INFO] Parse KW: `%v`", keyword)
+		parsed := []SERPItem{}
+
+		for page := 0; page < browserCtl.MaxPage; page++ {
+			url := GetSearchPageUrl(keyword, lr, page)
+			log.Printf("[INFO]     Url: `%v`", url)
+			headers := GetHeaders()
+			headers["Cookie"] = CookieToString(session.Cookie)
+			options := map[string]map[string]string{"headers": headers}
+			html, resp, _ := httpRequest.Get(url, options)
+
+			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {
+				page -= 1
+				session, solved_captcha = GenerateSession(keyword, lr)
+				solved_captcha_total += solved_captcha
+				continue
+			}
+
+			log.Printf("[INFO]     Append KW to parsed")
+			parsed = append(parsed, ParsePage(html, page)...)
+			totalPages += 1
+			sleep(4, 6)
+		}
+
 		result = append(result, parsed...)
 	}
 
-	return result
+	elapsed := time.Since(startTime)
+	hours := int(elapsed.Hours())
+	minutes := int(elapsed.Minutes()) % 60
+	seconds := int(elapsed.Seconds()) % 60
+	stats := Stats{
+		TotalPages:         totalPages,
+		TotalCaptchaSolved: solved_captcha_total,
+		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
+	}
+
+	return result, stats
 }

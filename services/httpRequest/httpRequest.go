@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -50,22 +51,38 @@ func readResponseBody(resp *http.Response) (string, error) {
 	return string(bodyBytes), nil
 }
 
-func Get(url string, options map[string]map[string]string) (string, *http.Response, error) {
+func Get(pageUrl string, options map[string]map[string]string) (string, *http.Response, error) {
 	// send req
-	req, _ := http.NewRequest("GET", url, nil)
+	req, _ := http.NewRequest("GET", pageUrl, nil)
 
 	for h, v := range options["headers"] {
 		req.Header.Add(h, v)
 	}
 
-	client := &http.Client{}
+	var client *http.Client
+
+	if options["proxy"] != nil {
+		proxyURL, _ := url.Parse(options["proxy"]["proxyStr"])
+
+		transport := &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
+
+		client = &http.Client{
+			Transport: transport,
+		}
+	} else {
+		client = &http.Client{}
+	}
+
 	resp, err := client.Do(req)
 	defer resp.Body.Close()
 
 	// read res
 	body, err := readResponseBody(resp)
+
 	if err != nil {
-		log.Fatalf("Ошибка чтения ответа: %v", err)
+		return "", resp, err
 	}
 
 	return body, resp, err

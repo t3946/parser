@@ -5,6 +5,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/storage"
 	"github.com/chromedp/chromedp"
+	"log"
 	browserCtl "parser/services/browserctl"
 	"parser/services/capsola"
 	"parser/services/geometry"
@@ -16,20 +17,24 @@ type Session struct {
 	Cookie []*network.Cookie
 }
 
-func GenerateSession(text string, lr string) Session {
+func GenerateSession(text string, lr string) (Session, int) {
+	log.Printf("[INFO] Generate new session")
+
+	solved_captcha := 0
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
 
 	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0))
 
-	if err.Error() == CaptchaError {
+	if err != nil && err.Error() == CaptchaError {
 		var res interface{}
 		var clickImageUrl string
 		var taskImageUrl string
 
+	SolveCaptcha:
 		chromedp.Run(ctx,
 			// click button "i am not a robot"
-			chromedp.Evaluate("document.getElementById('js-button').click()", &res),
+			chromedp.Evaluate("document.getElementById('js-button')?.click()", &res),
 			chromedp.WaitVisible(".AdvancedCaptcha-ImageWrapper img"),
 			chromedp.WaitVisible(".AdvancedCaptcha-SilhouetteTask img"),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-ImageWrapper img').src", &clickImageUrl),
@@ -63,19 +68,27 @@ func GenerateSession(text string, lr string) Session {
 			solution_coords[i].Y += rect.Top
 		}
 
+		var currentURL string
+
 		chromedp.Run(ctx,
 			chromedp.MouseClickXY(solution_coords[0].X, solution_coords[0].Y),
-			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[1].X, solution_coords[1].Y),
-			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[2].X, solution_coords[2].Y),
-			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[3].X, solution_coords[3].Y),
-			chromedp.Sleep(time.Second),
 			chromedp.Evaluate("document.querySelector('.CaptchaButton-ProgressWrapper').click()", &res),
 			chromedp.WaitReady("body"),
+			chromedp.Sleep(time.Second),
+			chromedp.Location(&currentURL),
 		)
 		//[end]
+
+		solved_captcha += 1
+
+		// solve captcha again
+		if strings.Contains(currentURL, "showcaptcha") {
+			log.Printf("[INFO]     Solve captcha again")
+			goto SolveCaptcha
+		}
 	}
 
 	// Получение всех cookies
@@ -89,7 +102,7 @@ func GenerateSession(text string, lr string) Session {
 
 	return Session{
 		Cookie: cookies,
-	}
+	}, solved_captcha
 }
 
 func CookieToString(cookie []*network.Cookie) string {
