@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/chromedp"
 	"log"
 	"math/rand"
@@ -84,7 +86,37 @@ func loadPage(ctx context.Context, url string) (string, error) {
 	var locationHref string
 	var html string
 
+	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		go func() {
+			switch ev := ev.(type) {
+			case *fetch.EventAuthRequired:
+				c := chromedp.FromContext(ctx)
+				execCtx := cdp.WithExecutor(ctx, c.Target)
+
+				resp := &fetch.AuthChallengeResponse{
+					Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+					Username: "C3smQv",
+					Password: "FPQoP8bkSX",
+				}
+
+				err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
+				if err != nil {
+					log.Print(err)
+				}
+
+			case *fetch.EventRequestPaused:
+				c := chromedp.FromContext(ctx)
+				execCtx := cdp.WithExecutor(ctx, c.Target)
+				err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
+				if err != nil {
+					log.Print(err)
+				}
+			}
+		}()
+	})
+
 	err := chromedp.Run(ctx,
+		fetch.Enable().WithHandleAuthRequests(true),
 		chromedp.Navigate(url),
 		chromedp.Sleep(time.Second),
 		chromedp.Evaluate(`window.scrollBy(0, document.body.scrollHeight)`, nil),
