@@ -214,10 +214,14 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			headers["Cookie"] = CookieToString(session.Cookie)
 			options := map[string]map[string]string{
 				"headers": headers,
-				"proxy": {
-					"proxyStr": "http://C3smQv:FPQoP8bkSX@77.83.148.95:1050",
-				},
 			}
+
+			if browserCtl.UseProxy {
+				options["proxy"] = map[string]string{
+					"proxyStr": "http://C3smQv:FPQoP8bkSX@77.83.148.95:1050",
+				}
+			}
+
 			html, resp, _ := httpRequest.Get(url, options)
 
 			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {

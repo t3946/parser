@@ -30,8 +30,11 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 		chromedp.Flag("window-size", "960,640"),
 		chromedp.Flag("start-maximized", false),
 		chromedp.Flag("enable-automation", false),
-		chromedp.ProxyServer("http://77.83.148.95:1050"),
 	)
+
+	if UseProxy {
+		opts = append(opts, chromedp.ProxyServer("http://77.83.148.95:1050"))
+	}
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
 
