@@ -20,21 +20,41 @@ type Session struct {
 func GenerateSession(text string, lr string) (Session, int) {
 	log.Printf("[INFO] Generate new session")
 
-	solved_captcha := 0
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
 
 	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0))
 
-	if err != nil && err.Error() == CaptchaError {
+	var isCaptchaSolved = false
+	var solved_captcha = 0
+
+	if err == nil {
+		isCaptchaSolved = true
+	} else if err.Error() != CaptchaError {
+		panic(err)
+	}
+
+	for solved_captcha = 0; !isCaptchaSolved; solved_captcha++ {
+		log.Printf("[INFO]     Generate captcha solution")
+
 		var res interface{}
 		var clickImageUrl string
 		var taskImageUrl string
+		var currentURL string
 
-	SolveCaptcha:
 		chromedp.Run(ctx,
 			// click button "i am not a robot"
 			chromedp.Evaluate("document.getElementById('js-button')?.click()", &res),
+			chromedp.Sleep(time.Second*2),
+			chromedp.Location(&currentURL),
+		)
+
+		//captcha passed in one click
+		if !strings.Contains(currentURL, "showcaptcha") {
+			break
+		}
+
+		chromedp.Run(ctx,
 			chromedp.WaitVisible(".AdvancedCaptcha-ImageWrapper img"),
 			chromedp.WaitVisible(".AdvancedCaptcha-SilhouetteTask img"),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-ImageWrapper img').src", &clickImageUrl),
@@ -68,8 +88,6 @@ func GenerateSession(text string, lr string) (Session, int) {
 			solution_coords[i].Y += rect.Top
 		}
 
-		var currentURL string
-
 		chromedp.Run(ctx,
 			chromedp.MouseClickXY(solution_coords[0].X, solution_coords[0].Y),
 			chromedp.MouseClickXY(solution_coords[1].X, solution_coords[1].Y),
@@ -82,12 +100,8 @@ func GenerateSession(text string, lr string) (Session, int) {
 		)
 		//[end]
 
-		solved_captcha += 1
-
-		// solve captcha again
-		if strings.Contains(currentURL, "showcaptcha") {
-			log.Printf("[INFO]     Solve captcha again")
-			goto SolveCaptcha
+		if !strings.Contains(currentURL, "showcaptcha") {
+			isCaptchaSolved = true
 		}
 	}
 
