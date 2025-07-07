@@ -210,14 +210,6 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
 	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
-	stats := Stats{
-		TotalPages:         0,
-		TotalCaptchaSolved: solvedCaptchaTotal,
-		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", 0, 0, 0),
-	}
-
-	return result, stats
-
 	solvedCaptchaTotal += solvedCaptcha
 	startTime := time.Now()
 	totalPages := 0
@@ -263,7 +255,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	hours := int(elapsed.Hours())
 	minutes := int(elapsed.Minutes()) % 60
 	seconds := int(elapsed.Seconds()) % 60
-	stats = Stats{
+	stats := Stats{
 		TotalPages:         totalPages,
 		TotalCaptchaSolved: solvedCaptchaTotal,
 		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
