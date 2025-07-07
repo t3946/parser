@@ -12,11 +12,10 @@ func init() {
 }
 
 func main() {
-	test := "1 keywords"
-	dataJson := storage.ReadFile("test/" + test + ".json")
+	dataJson := storage.ReadFile("test/100 keywords.json")
 	var kw []string
 	json.Unmarshal([]byte(dataJson), &kw)
-	items, stats := searchYandex.ParseKeywordsList(kw, "46")
-	storage.WriteFile(test+"/result.json", items)
-	storage.WriteFile(test+"/stats.json", stats)
+	items, stats := searchYandex.ParseKeywordsList(kw[0:3], "46")
+	storage.WriteFile("load-kw-test/result.json", items)
+	storage.WriteFile("load-kw-test/stats.json", stats)
 }
