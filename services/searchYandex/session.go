@@ -17,13 +17,13 @@ type Session struct {
 	Cookie []*network.Cookie
 }
 
-func GenerateSession(text string, lr string) (Session, int) {
+func GenerateSession(text string, lr string, oldSession *Session) (Session, int) {
 	log.Printf("[INFO] Generate new session")
 
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
 
-	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0))
+	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0), oldSession)
 
 	var isCaptchaSolved = false
 	var solved_captcha = 0
@@ -108,11 +108,14 @@ func GenerateSession(text string, lr string) (Session, int) {
 	// Получение всех cookies
 	var cookies []*network.Cookie
 
-	chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		var err error
-		cookies, err = storage.GetCookies().Do(ctx)
-		return err
-	}))
+	chromedp.Run(
+		ctx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var err error
+			cookies, err = storage.GetCookies().Do(ctx)
+			return err
+		}),
+	)
 
 	return Session{
 		Cookie: cookies,

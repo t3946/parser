@@ -82,7 +82,7 @@ func GetSearchPageUrl(text string, lr string, page int) string {
 //	}
 //
 // fmt.Println("Содержимое страницы:", content)
-func loadPage(ctx context.Context, url string) (string, error) {
+func loadPage(ctx context.Context, url string, session *Session) (string, error) {
 	var locationHref string
 	var html string
 
@@ -117,6 +117,17 @@ func loadPage(ctx context.Context, url string) (string, error) {
 
 	err := chromedp.Run(ctx,
 		fetch.Enable().WithHandleAuthRequests(true),
+	)
+
+	if session != nil {
+		err = chromedp.Run(ctx,
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				return browserCtl.SetCookiesFromNetworkCookies(ctx, session.Cookie)
+			}),
+		)
+	}
+
+	err = chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		chromedp.Sleep(time.Second),
 		chromedp.Evaluate(`window.scrollBy(0, document.body.scrollHeight)`, nil),
@@ -197,9 +208,17 @@ func ParsePage(html string, page int) []SERPItem {
 
 func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	result := []SERPItem{}
-	solved_captcha_total := 0
-	session, solved_captcha := GenerateSession(keywords[0], lr)
-	solved_captcha_total += solved_captcha
+	solvedCaptchaTotal := 0
+	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
+	stats := Stats{
+		TotalPages:         0,
+		TotalCaptchaSolved: solvedCaptchaTotal,
+		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", 0, 0, 0),
+	}
+
+	return result, stats
+
+	solvedCaptchaTotal += solvedCaptcha
 	startTime := time.Now()
 	totalPages := 0
 
@@ -226,8 +245,8 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {
 				page -= 1
-				session, solved_captcha = GenerateSession(keyword, lr)
-				solved_captcha_total += solved_captcha
+				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
+				solvedCaptchaTotal += solvedCaptcha
 				continue
 			}
 
@@ -244,9 +263,9 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	hours := int(elapsed.Hours())
 	minutes := int(elapsed.Minutes()) % 60
 	seconds := int(elapsed.Seconds()) % 60
-	stats := Stats{
+	stats = Stats{
 		TotalPages:         totalPages,
-		TotalCaptchaSolved: solved_captcha_total,
+		TotalCaptchaSolved: solvedCaptchaTotal,
 		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
 	}
 

@@ -8,6 +8,7 @@ package browserCtl
 
 import (
 	"context"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"parser/services/useragent"
 )
@@ -23,7 +24,7 @@ type SERPItem struct {
 
 func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
+		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
@@ -60,4 +61,24 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	}
 
 	return ctx, cancelAll
+}
+
+func SetCookiesFromNetworkCookies(ctx context.Context, cookies []*network.Cookie) error {
+	var cookieParams []*network.CookieParam
+
+	for _, c := range cookies {
+		cp := &network.CookieParam{
+			Name:     c.Name,
+			Value:    c.Value,
+			Domain:   c.Domain,
+			Path:     c.Path,
+			Secure:   c.Secure,
+			HTTPOnly: c.HTTPOnly,
+			SameSite: c.SameSite,
+		}
+
+		cookieParams = append(cookieParams, cp)
+	}
+
+	return network.SetCookies(cookieParams).Do(ctx)
 }
