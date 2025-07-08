@@ -27,13 +27,14 @@ type SERPItem struct {
 
 func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", false),
+		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
 		chromedp.Flag("window-size", "960,640"),
 		chromedp.Flag("start-maximized", false),
 		chromedp.Flag("enable-automation", false),
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 	)
 
 	if UseProxy {

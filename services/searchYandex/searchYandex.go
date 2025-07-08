@@ -211,7 +211,6 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			log.Printf("[INFO]     Append KW to parsed")
 			parsed = append(parsed, ParsePage(html, page)...)
 			totalPages += 1
-			sleep(4, 6)
 		}
 
 		result = append(result, parsed...)
@@ -251,7 +250,6 @@ func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, St
 				log.Printf("[INFO]     Append KW to parsed")
 				parsed = append(parsed, ParsePage(html, page)...)
 				totalPages += 1
-				sleep(4, 6)
 			} else if err.Error() == CaptchaError {
 				page -= 1
 				solvedCaptchaTotal += SolveCaptcha(ctx)
