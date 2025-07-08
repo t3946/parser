@@ -25,17 +25,27 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 
 	_, err := LoadPage(ctx, GetSearchPageUrl(text, lr, 0), oldSession)
 
-	var isCaptchaSolved = false
-	var solved_captcha = 0
+	var solvedCaptcha = 0
 
-	if err == nil {
-		isCaptchaSolved = true
-	} else if err.Error() != CaptchaError {
+	if err != nil && err.Error() == CaptchaError {
+		solvedCaptcha = SolveCaptcha(ctx)
+	} else {
 		panic(err)
 	}
 
-	for solved_captcha = 0; !isCaptchaSolved; solved_captcha++ {
-		log.Printf("[INFO]     Generate captcha solution")
+	session := Session{
+		Cookie: getCookieFromCtx(ctx),
+	}
+
+	return session, solvedCaptcha
+}
+
+func SolveCaptcha(ctx context.Context) int {
+	var isCaptchaSolved = false
+	var solvedCaptchaCount = 0
+
+	for solvedCaptchaCount = 0; !isCaptchaSolved; solvedCaptchaCount++ {
+		log.Printf("[INFO] Solve Captcha")
 
 		var res interface{}
 		var clickImageUrl string
@@ -105,7 +115,20 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 		}
 	}
 
-	// Получение всех cookies
+	return solvedCaptchaCount
+}
+
+func CookieToString(cookie []*network.Cookie) string {
+	var cookiePairs []string
+
+	for _, c := range cookie {
+		cookiePairs = append(cookiePairs, c.Name+"="+c.Value)
+	}
+
+	return strings.Join(cookiePairs, "; ")
+}
+
+func getCookieFromCtx(ctx context.Context) []*network.Cookie {
 	var cookies []*network.Cookie
 
 	chromedp.Run(
@@ -117,17 +140,5 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 		}),
 	)
 
-	return Session{
-		Cookie: cookies,
-	}, solved_captcha
-}
-
-func CookieToString(cookie []*network.Cookie) string {
-	var cookiePairs []string
-
-	for _, c := range cookie {
-		cookiePairs = append(cookiePairs, c.Name+"="+c.Value)
-	}
-
-	return strings.Join(cookiePairs, "; ")
+	return cookies
 }

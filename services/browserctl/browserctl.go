@@ -8,8 +8,11 @@ package browserCtl
 
 import (
 	"context"
+	"github.com/chromedp/cdproto/cdp"
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
+	"log"
 	"parser/services/useragent"
 )
 
@@ -24,7 +27,7 @@ type SERPItem struct {
 
 func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
+		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
@@ -40,6 +43,46 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
+	UseProxy := false
+
+	if UseProxy {
+		chromedp.ListenTarget(ctx, func(ev interface{}) {
+			go func() {
+				switch ev := ev.(type) {
+				case *fetch.EventAuthRequired:
+					c := chromedp.FromContext(ctx)
+					execCtx := cdp.WithExecutor(ctx, c.Target)
+
+					resp := &fetch.AuthChallengeResponse{
+						Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+						Username: "C3smQv",
+						Password: "FPQoP8bkSX",
+					}
+
+					err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
+					if err != nil {
+						log.Print(err)
+					}
+
+				case *fetch.EventRequestPaused:
+					c := chromedp.FromContext(ctx)
+					execCtx := cdp.WithExecutor(ctx, c.Target)
+					err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
+					if err != nil {
+						log.Print(err)
+					}
+				}
+			}()
+		})
+
+		err := chromedp.Run(ctx,
+			fetch.Enable().WithHandleAuthRequests(true),
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	cancel := func() {
 		cancelCtx()

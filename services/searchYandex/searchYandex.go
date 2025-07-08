@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/chromedp"
 	"log"
 	"math/rand"
@@ -28,9 +26,9 @@ type SERPItem struct {
 }
 
 type Stats struct {
-	TotalPages         int    `json:"total_pages"`
+	TotalPages         int    `json:"total_pages_loaded"`
 	TotalCaptchaSolved int    `json:"total_captcha_solved"`
-	TimeSpend          string `json:"time_spend"`
+	TimeSpend          string `json:"time_spent"`
 }
 
 const CaptchaError string = "Captcha error"
@@ -85,39 +83,7 @@ func GetSearchPageUrl(text string, lr string, page int) string {
 func LoadPage(ctx context.Context, url string, session *Session) (string, error) {
 	var locationHref string
 	var html string
-
-	chromedp.ListenTarget(ctx, func(ev interface{}) {
-		go func() {
-			switch ev := ev.(type) {
-			case *fetch.EventAuthRequired:
-				c := chromedp.FromContext(ctx)
-				execCtx := cdp.WithExecutor(ctx, c.Target)
-
-				resp := &fetch.AuthChallengeResponse{
-					Response: fetch.AuthChallengeResponseResponseProvideCredentials,
-					Username: "C3smQv",
-					Password: "FPQoP8bkSX",
-				}
-
-				err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
-				if err != nil {
-					log.Print(err)
-				}
-
-			case *fetch.EventRequestPaused:
-				c := chromedp.FromContext(ctx)
-				execCtx := cdp.WithExecutor(ctx, c.Target)
-				err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
-				if err != nil {
-					log.Print(err)
-				}
-			}
-		}()
-	})
-
-	err := chromedp.Run(ctx,
-		fetch.Enable().WithHandleAuthRequests(true),
-	)
+	var err error
 
 	if session != nil {
 		err = chromedp.Run(ctx,
@@ -267,43 +233,31 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, Stats) {
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
-	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
-	solvedCaptchaTotal += solvedCaptcha
+	ctx, cancelAll := browserCtl.GetContext(context.Background())
+	defer cancelAll()
 	startTime := time.Now()
 	totalPages := 0
+	var session Session
 
 	for _, keyword := range keywords {
-		log.Printf("[INFO] Parse KW: `%v`", keyword)
 		parsed := []SERPItem{}
 
 		for page := 0; page < browserCtl.MaxPage; page++ {
+			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
 			url := GetSearchPageUrl(keyword, lr, page)
-			log.Printf("[INFO]     Url: `%v`", url)
-			headers := GetHeaders()
-			headers["Cookie"] = CookieToString(session.Cookie)
-			options := map[string]map[string]string{
-				"headers": headers,
-			}
+			html, err := LoadPage(ctx, url, &session)
 
-			if browserCtl.UseProxy {
-				options["proxy"] = map[string]string{
-					"proxyStr": "http://C3smQv:FPQoP8bkSX@77.83.148.95:1050",
-				}
-			}
-
-			html, resp, _ := httpRequest.Get(url, options)
-
-			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {
+			if err == nil {
+				log.Printf("[INFO]     Append KW to parsed")
+				parsed = append(parsed, ParsePage(html, page)...)
+				totalPages += 1
+				sleep(4, 6)
+			} else if err.Error() == CaptchaError {
 				page -= 1
-				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
-				solvedCaptchaTotal += solvedCaptcha
-				continue
+				solvedCaptchaTotal += SolveCaptcha(ctx)
+			} else {
+				panic(err)
 			}
-
-			log.Printf("[INFO]     Append KW to parsed")
-			parsed = append(parsed, ParsePage(html, page)...)
-			totalPages += 1
-			sleep(4, 6)
 		}
 
 		result = append(result, parsed...)
