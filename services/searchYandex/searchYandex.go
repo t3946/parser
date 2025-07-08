@@ -263,3 +263,61 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 	return result, stats
 }
+
+func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, Stats) {
+	result := []SERPItem{}
+	solvedCaptchaTotal := 0
+	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
+	solvedCaptchaTotal += solvedCaptcha
+	startTime := time.Now()
+	totalPages := 0
+
+	for _, keyword := range keywords {
+		log.Printf("[INFO] Parse KW: `%v`", keyword)
+		parsed := []SERPItem{}
+
+		for page := 0; page < browserCtl.MaxPage; page++ {
+			url := GetSearchPageUrl(keyword, lr, page)
+			log.Printf("[INFO]     Url: `%v`", url)
+			headers := GetHeaders()
+			headers["Cookie"] = CookieToString(session.Cookie)
+			options := map[string]map[string]string{
+				"headers": headers,
+			}
+
+			if browserCtl.UseProxy {
+				options["proxy"] = map[string]string{
+					"proxyStr": "http://C3smQv:FPQoP8bkSX@77.83.148.95:1050",
+				}
+			}
+
+			html, resp, _ := httpRequest.Get(url, options)
+
+			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {
+				page -= 1
+				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
+				solvedCaptchaTotal += solvedCaptcha
+				continue
+			}
+
+			log.Printf("[INFO]     Append KW to parsed")
+			parsed = append(parsed, ParsePage(html, page)...)
+			totalPages += 1
+			sleep(4, 6)
+		}
+
+		result = append(result, parsed...)
+	}
+
+	elapsed := time.Since(startTime)
+	hours := int(elapsed.Hours())
+	minutes := int(elapsed.Minutes()) % 60
+	seconds := int(elapsed.Seconds()) % 60
+	stats := Stats{
+		TotalPages:         totalPages,
+		TotalCaptchaSolved: solvedCaptchaTotal,
+		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
+	}
+
+	return result, stats
+}
