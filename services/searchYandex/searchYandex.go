@@ -63,7 +63,7 @@ func GetSearchPageUrl(text string, lr string, page int) string {
 	return pageUrl.String()
 }
 
-// loadPage загружает страницу по указанному URL с использованием переданного контекста.
+// LoadPage загружает страницу по указанному URL с использованием переданного контекста.
 //
 // Параметры:
 //   - ctx: контекст для управления временем жизни операции и отмены.
@@ -75,14 +75,14 @@ func GetSearchPageUrl(text string, lr string, page int) string {
 //
 // Пример использования:
 //
-// content, err := loadPage(ctx, "https://example.com")
+// content, err := LoadPage(ctx, "https://example.com")
 //
 //	if err != nil {
 //	    log.Fatalf("Ошибка загрузки страницы: %v", err)
 //	}
 //
 // fmt.Println("Содержимое страницы:", content)
-func loadPage(ctx context.Context, url string, session *Session) (string, error) {
+func LoadPage(ctx context.Context, url string, session *Session) (string, error) {
 	var locationHref string
 	var html string
 

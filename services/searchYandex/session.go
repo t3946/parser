@@ -23,7 +23,7 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
 
-	_, err := loadPage(ctx, GetSearchPageUrl(text, lr, 0), oldSession)
+	_, err := LoadPage(ctx, GetSearchPageUrl(text, lr, 0), oldSession)
 
 	var isCaptchaSolved = false
 	var solved_captcha = 0
