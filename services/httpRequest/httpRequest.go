@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"encoding/json"
 	"errors"
+	"github.com/Danny-Dasilva/CycleTLS/cycletls"
 	"github.com/andybalholm/brotli"
 	"io"
 	"io/ioutil"
@@ -86,6 +87,42 @@ func Get(pageUrl string, options map[string]map[string]string) (string, *http.Re
 	}
 
 	return body, resp, err
+}
+
+func GetCycleTls(pageUrl string, options *map[string]map[string]string) (string, *cycletls.Response, error) {
+	// send req
+	client := cycletls.Init()
+
+	cycletlsOptions := cycletls.Options{
+		Body:      "",
+		Ja3:       "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,11-5-51-65037-23-0-45-65281-27-13-18-35-16-43-10,4588-29-23-24,0",
+		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+	}
+
+	if options != nil {
+		headers, ok := (*options)["headers"]
+
+		if ok {
+			cycletlsOptions.Headers = headers
+		}
+
+		proxy, ok := (*options)["proxy"]
+
+		if ok {
+			cycletlsOptions.Proxy = proxy["proxyStr"]
+		}
+	}
+
+	resp, err := client.Do(pageUrl, cycletlsOptions, "GET")
+
+	if err != nil {
+		return "", &resp, err
+	}
+
+	// read res
+	body := resp.Body
+
+	return body, &resp, err
 }
 
 func Post(url string, options map[string]map[string]string) (string, error) {

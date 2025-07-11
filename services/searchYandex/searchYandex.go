@@ -209,9 +209,9 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 				}
 			}
 
-			html, resp, _ := httpRequest.Get(url, options)
+			html, resp, _ := httpRequest.GetCycleTls(url, &options)
 
-			if strings.Contains(resp.Request.URL.String(), "showcaptcha") {
+			if strings.Contains(resp.FinalUrl, "showcaptcha") {
 				page -= 1
 				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
 				solvedCaptchaTotal += solvedCaptcha
