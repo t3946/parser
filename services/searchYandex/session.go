@@ -18,7 +18,11 @@ type Session struct {
 }
 
 func GenerateSession(text string, lr string, oldSession *Session) (Session, int) {
-	log.Printf("[INFO] Generate new session")
+	if oldSession != nil {
+		log.Printf("[INFO] Retrust session")
+	} else {
+		log.Printf("[INFO] Generate new session")
+	}
 
 	ctx, cancelAll := browserCtl.GetContext(context.Background())
 	defer cancelAll()
@@ -27,10 +31,12 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 
 	var solvedCaptcha = 0
 
-	if err != nil && err.Error() == CaptchaError {
-		solvedCaptcha = SolveCaptcha(ctx)
-	} else {
-		panic(err)
+	if err != nil {
+		if err.Error() == CaptchaError {
+			solvedCaptcha = SolveCaptcha(ctx)
+		} else {
+			panic(err)
+		}
 	}
 
 	session := Session{
@@ -44,8 +50,8 @@ func SolveCaptcha(ctx context.Context) int {
 	var isCaptchaSolved = false
 	var solvedCaptchaCount = 0
 
-	for solvedCaptchaCount = 0; !isCaptchaSolved; solvedCaptchaCount++ {
-		log.Printf("[INFO] Solve Captcha")
+	for !isCaptchaSolved {
+		log.Printf("[INFO] Captcha offered")
 
 		var res interface{}
 		var clickImageUrl string
@@ -61,8 +67,11 @@ func SolveCaptcha(ctx context.Context) int {
 
 		//captcha passed in one click
 		if !strings.Contains(currentURL, "showcaptcha") {
+			log.Printf("[INFO] Captcha checkbox accepted")
 			break
 		}
+
+		log.Printf("[INFO] Solve smart captcha")
 
 		chromedp.Run(ctx,
 			chromedp.WaitVisible(".AdvancedCaptcha-ImageWrapper img"),
@@ -113,6 +122,8 @@ func SolveCaptcha(ctx context.Context) int {
 		if !strings.Contains(currentURL, "showcaptcha") {
 			isCaptchaSolved = true
 		}
+
+		solvedCaptchaCount++
 	}
 
 	return solvedCaptchaCount

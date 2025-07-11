@@ -28,6 +28,7 @@ type SERPItem struct {
 type Stats struct {
 	TotalPages         int    `json:"total_pages_loaded"`
 	TotalCaptchaSolved int    `json:"total_captcha_solved"`
+	AccessSuspended    int    `json:"access_suspended"`
 	TimeSpend          string `json:"time_spent"`
 }
 
@@ -177,16 +178,16 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	solvedCaptchaTotal := 0
 	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
 	solvedCaptchaTotal += solvedCaptcha
+	accessSuspended := 0
 	startTime := time.Now()
 	totalPages := 0
 
 	for _, keyword := range keywords {
-		log.Printf("[INFO] Parse KW: `%v`", keyword)
 		parsed := []SERPItem{}
 
 		for page := 0; page < browserCtl.MaxPage; page++ {
 			url := GetSearchPageUrl(keyword, lr, page)
-			log.Printf("[INFO]     Url: `%v`", url)
+			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
 			headers := GetHeaders()
 			headers["Cookie"] = CookieToString(session.Cookie)
 			options := map[string]map[string]string{
@@ -205,10 +206,11 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 				page -= 1
 				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
 				solvedCaptchaTotal += solvedCaptcha
+				accessSuspended += 1
 				continue
 			}
 
-			log.Printf("[INFO]     Append KW to parsed")
+			log.Printf("[INFO] Parsed")
 			parsed = append(parsed, ParsePage(html, page)...)
 			totalPages += 1
 		}
@@ -224,6 +226,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 		TotalPages:         totalPages,
 		TotalCaptchaSolved: solvedCaptchaTotal,
 		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
+		AccessSuspended:    accessSuspended,
 	}
 
 	return result, stats

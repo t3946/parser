@@ -16,8 +16,8 @@ func main() {
 	dataJson := storage.ReadFile("test/100 keywords.json")
 	var kw []string
 	json.Unmarshal([]byte(dataJson), &kw)
-	kwNumber := 5
-	items, stats := searchYandex.ParseKeywordsListWithChromeDP(kw[0:kwNumber], "46")
+	kwNumber := 3
+	items, stats := searchYandex.ParseKeywordsList(kw[0:kwNumber], "46")
 	dir := fmt.Sprintf("load-kw-test-%v", kwNumber)
 	storage.WriteFile(dir+"/result.json", items)
 	storage.WriteFile(dir+"/stats.json", stats)
