@@ -182,19 +182,49 @@ func ParsePage(html string, page int) []SERPItem {
 	return result
 }
 
+func tryGenerateSession(text string, lr string, oldSession *Session) (Session, int, error) {
+	var session Session
+	var solvedCaptcha int
+	var err error
+
+	for i := 1; i <= 3; i++ {
+		session, solvedCaptcha, err = GenerateSession(text, lr, oldSession)
+
+		if err != nil {
+			log.Printf("[WARN] " + err.Error())
+			continue
+		}
+
+		return session, solvedCaptcha, nil
+	}
+
+	return session, solvedCaptcha, err
+}
+
 func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
+	var session Session
+	var solvedCaptcha int
+	var err error
+
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
-	session, solvedCaptcha := GenerateSession(keywords[0], lr, nil)
+
+	session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, nil)
+
+	if err != nil {
+		panic("Can't generate session: " + err.Error())
+	}
+
 	solvedCaptchaTotal += solvedCaptcha
 	accessSuspended := 0
 	startTime := time.Now()
 	totalPages := 0
 
-	for _, keyword := range keywords {
+	for j := 0; j < len(keywords); j++ {
 		parsed := []SERPItem{}
+		for page := 0; page < browserCtl.Deep; page++ {
 
-		for page := 0; page < browserCtl.MaxPage; page++ {
+			keyword := keywords[j]
 			url := GetSearchPageUrl(keyword, lr, page)
 			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
 			headers := GetHeaders()
@@ -213,7 +243,12 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			if strings.Contains(resp.FinalUrl, "showcaptcha") {
 				page -= 1
-				session, solvedCaptcha = GenerateSession(keyword, lr, &session)
+				session, solvedCaptcha, err = tryGenerateSession(keyword, lr, &session)
+
+				if err != nil {
+					panic("Can't generate session: " + err.Error())
+				}
+
 				solvedCaptchaTotal += solvedCaptcha
 				accessSuspended += 1
 				continue
@@ -253,7 +288,7 @@ func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, St
 	for _, keyword := range keywords {
 		parsed := []SERPItem{}
 
-		for page := 0; page < browserCtl.MaxPage; page++ {
+		for page := 0; page < browserCtl.Deep; page++ {
 			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
 			url := GetSearchPageUrl(keyword, lr, page)
 			html, err := LoadPage(ctx, url, &session)

@@ -17,7 +17,7 @@ type Session struct {
 	Cookie []*network.Cookie
 }
 
-func GenerateSession(text string, lr string, oldSession *Session) (Session, int) {
+func GenerateSession(text string, lr string, oldSession *Session) (Session, int, error) {
 	if oldSession != nil {
 		log.Printf("[INFO] Retrust session")
 	} else {
@@ -35,7 +35,7 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 		if err.Error() == CaptchaError {
 			solvedCaptcha = SolveCaptcha(ctx)
 		} else {
-			panic(err)
+			return Session{}, 0, err
 		}
 	}
 
@@ -43,7 +43,7 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int)
 		Cookie: getCookieFromCtx(ctx),
 	}
 
-	return session, solvedCaptcha
+	return session, solvedCaptcha, nil
 }
 
 func SolveCaptcha(ctx context.Context) int {
