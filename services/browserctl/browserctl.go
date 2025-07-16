@@ -25,6 +25,10 @@ type SERPItem struct {
 	Text   string `json:"text"`
 }
 
+type ContextOptions struct {
+	Proxy string
+}
+
 func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -44,7 +48,6 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
-	UseProxy := false
 
 	if UseProxy {
 		chromedp.ListenTarget(ctx, func(ev interface{}) {
