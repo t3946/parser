@@ -10,7 +10,9 @@ import (
 	"math/rand"
 	"net/url"
 	browserCtl "parser/services/browserctl"
+	"parser/services/config"
 	"parser/services/httpRequest"
+	"parser/services/proxy"
 	"strconv"
 	"strings"
 	"time"
@@ -222,7 +224,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 	for j := 0; j < len(keywords); j++ {
 		parsed := []SERPItem{}
-		for page := 0; page < browserCtl.Deep; page++ {
+		for page := 0; page < config.Deep; page++ {
 
 			keyword := keywords[j]
 			url := GetSearchPageUrl(keyword, lr, page)
@@ -233,9 +235,10 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 				"headers": headers,
 			}
 
-			if browserCtl.UseProxy {
+			if config.UseProxy {
+				proxyStr := fmt.Sprintf("http://%s:%s@%s:%s")
 				options["proxy"] = map[string]string{
-					"proxyStr": "http://C3smQv:FPQoP8bkSX@77.83.148.95:1050",
+					"proxyStr": proxyStr,
 				}
 			}
 
@@ -279,7 +282,16 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, Stats) {
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
-	ctx, cancelAll := browserCtl.GetContext(context.Background())
+	contextOptions := browserCtl.GetContextOptions{
+		Proxy: nil,
+	}
+
+	if config.UseProxy {
+		proxyStruct := proxy.GetProxy()
+		contextOptions.Proxy = &proxyStruct
+	}
+
+	ctx, cancelAll := browserCtl.GetContext(context.Background(), contextOptions)
 	defer cancelAll()
 	startTime := time.Now()
 	totalPages := 0
@@ -288,7 +300,7 @@ func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, St
 	for _, keyword := range keywords {
 		parsed := []SERPItem{}
 
-		for page := 0; page < browserCtl.Deep; page++ {
+		for page := 0; page < config.Deep; page++ {
 			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
 			url := GetSearchPageUrl(keyword, lr, page)
 			html, err := LoadPage(ctx, url, &session)

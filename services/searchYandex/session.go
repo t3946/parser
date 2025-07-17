@@ -8,7 +8,9 @@ import (
 	"log"
 	browserCtl "parser/services/browserctl"
 	"parser/services/capsola"
+	"parser/services/config"
 	"parser/services/geometry"
+	"parser/services/proxy"
 	"strings"
 	"time"
 )
@@ -24,7 +26,16 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int,
 		log.Printf("[INFO] Generate new session")
 	}
 
-	ctx, cancelAll := browserCtl.GetContext(context.Background())
+	contextOptions := browserCtl.GetContextOptions{
+		Proxy: nil,
+	}
+
+	if config.UseProxy {
+		proxyStruct := proxy.GetProxy()
+		contextOptions.Proxy = &proxyStruct
+	}
+
+	ctx, cancelAll := browserCtl.GetContext(context.Background(), contextOptions)
 	defer cancelAll()
 
 	_, err := LoadPage(ctx, GetSearchPageUrl(text, lr, 0), oldSession)

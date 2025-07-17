@@ -1,4 +1,4 @@
-package browserCtl
+package config
 
 import "time"
 

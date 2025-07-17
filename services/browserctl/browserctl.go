@@ -8,11 +8,14 @@ package browserCtl
 
 import (
 	"context"
+	"fmt"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"log"
+	"parser/services/config"
+	"parser/services/proxy"
 	"parser/services/useragent"
 )
 
@@ -25,11 +28,11 @@ type SERPItem struct {
 	Text   string `json:"text"`
 }
 
-type ContextOptions struct {
-	Proxy string
+type GetContextOptions struct {
+	Proxy *proxy.Proxy
 }
 
-func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
+func GetContext(parent context.Context, options GetContextOptions) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
@@ -41,15 +44,16 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 	)
 
-	if UseProxy {
-		opts = append(opts, chromedp.ProxyServer("http://77.83.148.95:1050"))
+	if options.Proxy != nil {
+		urlStr := fmt.Sprintf("http://%s:%s", options.Proxy.Host, options.Proxy.Port)
+		opts = append(opts, chromedp.ProxyServer(urlStr))
 	}
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
 
-	if UseProxy {
+	if options.Proxy != nil {
 		chromedp.ListenTarget(ctx, func(ev interface{}) {
 			go func() {
 				switch ev := ev.(type) {
@@ -59,8 +63,8 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 
 					resp := &fetch.AuthChallengeResponse{
 						Response: fetch.AuthChallengeResponseResponseProvideCredentials,
-						Username: "C3smQv",
-						Password: "FPQoP8bkSX",
+						Username: options.Proxy.User,
+						Password: options.Proxy.Pass,
 					}
 
 					err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
@@ -95,8 +99,8 @@ func GetContext(parent context.Context) (context.Context, context.CancelFunc) {
 
 	var cancelTimeout context.CancelFunc
 
-	if TimeOutSec > 0 {
-		ctx, cancelTimeout = context.WithTimeout(ctx, TimeOutSec)
+	if config.TimeOutSec > 0 {
+		ctx, cancelTimeout = context.WithTimeout(ctx, config.TimeOutSec)
 	}
 
 	cancelAll := func() {
