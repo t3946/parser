@@ -45,8 +45,8 @@ func GetProxyStr() string {
 	return readFromFile()
 }
 
-func GetProxyStruct() Proxy {
-	proxyStr := readFromFile()
+func GetProxy() Proxy {
+	proxyStr := GetProxyStr()
 
 	return ProxyStrToStruct(proxyStr)
 }
