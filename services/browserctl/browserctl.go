@@ -34,7 +34,7 @@ type GetContextOptions struct {
 
 func GetContext(parent context.Context, options GetContextOptions) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
+		chromedp.Flag("headless", false),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),

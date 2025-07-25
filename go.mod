@@ -23,6 +23,7 @@ require (
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/quic-go/quic-go v0.41.0 // indirect
 	github.com/refraction-networking/utls v1.6.2 // indirect
+	github.com/trananhtung/proxy-checker v1.0.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
