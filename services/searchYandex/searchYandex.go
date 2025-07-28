@@ -34,6 +34,11 @@ type Stats struct {
 	TimeSpend          string `json:"time_spent"`
 }
 
+type TResult struct {
+	Items []SERPItem
+	Stats Stats
+}
+
 const CaptchaError string = "Captcha error"
 
 func generateMSID() string {
@@ -277,6 +282,17 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	}
 
 	return result, stats
+}
+
+func ParseKeywordsListRoutine(keywords []string, lr string, channel chan TResult) {
+	items, stats := ParseKeywordsList(keywords, lr)
+
+	result := TResult{
+		Items: items,
+		Stats: stats,
+	}
+
+	channel <- result
 }
 
 func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, Stats) {

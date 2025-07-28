@@ -3,7 +3,7 @@ package config
 import "time"
 
 const (
-	Deep       = 3
+	Deep       = 1
 	TimeOutSec = 0 * time.Second
-	UseProxy   = true
+	UseProxy   = false
 )
