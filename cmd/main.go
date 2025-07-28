@@ -6,6 +6,8 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"math"
+	"parser/services/config"
+	"parser/services/proxy"
 	"parser/services/searchYandex"
 	"parser/services/storage"
 	"slices"
@@ -15,19 +17,19 @@ import (
 
 func init() {
 	godotenv.Load()
+	proxy.Init()
 }
 
 func main() {
 	//fetch sources data
 	dataJson := storage.ReadFile("test/100 keywords.json")
 	var kw []string
-	kwNumber := 10
+	kwNumber := 1
 	json.Unmarshal([]byte(dataJson), &kw)
 	kw = kw[0:kwNumber]
 
 	//chunk source data
-	maxRoutines := 3
-	chunkSize := math.Ceil(float64(len(kw)) / float64(maxRoutines))
+	chunkSize := math.Ceil(float64(len(kw)) / float64(config.Threads))
 	chunks := slices.Chunk(kw, int(chunkSize))
 
 	//[start] process input data
@@ -35,7 +37,7 @@ func main() {
 
 	startTime := time.Now()
 	resultsCh := make(chan searchYandex.TResult)
-	sem := make(chan struct{}, maxRoutines) // семафор с десятью слотами
+	sem := make(chan struct{}, config.Threads) // семафор с десятью слотами
 
 	var wg sync.WaitGroup
 

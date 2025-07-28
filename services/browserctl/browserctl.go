@@ -34,7 +34,7 @@ type GetContextOptions struct {
 
 func GetContext(parent context.Context, options GetContextOptions) (context.Context, context.CancelFunc) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
+		chromedp.Flag("headless", config.Headless),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.UserAgent(useragent.RandomUserAgent()),
 		chromedp.Flag("accept-lang", "ru-RU,ru;q=0.9,en;q=0.8"),
@@ -53,7 +53,7 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
 
-	if options.Proxy != nil {
+	if options.Proxy != nil && options.Proxy.User != "" {
 		chromedp.ListenTarget(ctx, func(ev interface{}) {
 			go func() {
 				switch ev := ev.(type) {

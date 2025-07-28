@@ -194,7 +194,7 @@ func tryGenerateSession(text string, lr string, oldSession *Session) (Session, i
 	var solvedCaptcha int
 	var err error
 
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= config.AttemptsToGenerateSession; i++ {
 		session, solvedCaptcha, err = GenerateSession(text, lr, oldSession)
 
 		if err != nil {
@@ -241,7 +241,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			}
 
 			if config.UseProxy {
-				proxyStr := fmt.Sprintf("http://%s:%s@%s:%s")
+				proxyStr := fmt.Sprintf("http://%s:%s")
 				options["proxy"] = map[string]string{
 					"proxyStr": proxyStr,
 				}
