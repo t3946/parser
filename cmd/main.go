@@ -24,7 +24,7 @@ func main() {
 	//fetch sources data
 	dataJson := storage.ReadFile("test/100 keywords.json")
 	var kw []string
-	kwNumber := 1
+	kwNumber := config.KwNumber
 	json.Unmarshal([]byte(dataJson), &kw)
 	kw = kw[0:kwNumber]
 

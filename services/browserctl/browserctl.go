@@ -29,7 +29,7 @@ type SERPItem struct {
 }
 
 type GetContextOptions struct {
-	Proxy *proxy.Proxy
+	Proxy *proxy.TProxy
 }
 
 func GetContext(parent context.Context, options GetContextOptions) (context.Context, context.CancelFunc) {
@@ -44,7 +44,7 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 	)
 
-	if options.Proxy != nil {
+	if config.UseProxy && options.Proxy != nil {
 		urlStr := fmt.Sprintf("http://%s:%s", options.Proxy.Host, options.Proxy.Port)
 		opts = append(opts, chromedp.ProxyServer(urlStr))
 	}
@@ -53,7 +53,7 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 
 	ctx, cancelCtx := chromedp.NewContext(allocCtx)
 
-	if options.Proxy != nil && options.Proxy.User != "" {
+	if config.UseProxy && options.Proxy != nil && options.Proxy.User != "" {
 		chromedp.ListenTarget(ctx, func(ev interface{}) {
 			go func() {
 				switch ev := ev.(type) {

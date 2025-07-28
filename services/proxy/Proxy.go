@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Proxy struct {
+type TProxy struct {
 	User string `json:"user"`
 	Pass string `json:"pass"`
 	Host string `json:"host"`
@@ -17,7 +17,7 @@ type Proxy struct {
 }
 
 var index = 0
-var proxies = []Proxy{}
+var proxies = []TProxy{}
 var testURL = "https://yandex.ru"
 var testTimeOutSec = 1
 
@@ -32,11 +32,11 @@ func Init() {
 	proxiesStr := strings.Split(response, "\n")
 
 	for _, proxyStr := range proxiesStr {
-		proxies = append(proxies, proxyStrToStruct(proxyStr))
+		proxies = append(proxies, StrToStruct(proxyStr))
 	}
 }
 
-func structToStr(proxy Proxy) string {
+func StructToStr(proxy TProxy) string {
 	if proxy.User != "" {
 		return fmt.Sprintf("http://%s:%s@%s:%s", proxy.User, proxy.Pass, proxy.Host, proxy.Port)
 	}
@@ -44,7 +44,7 @@ func structToStr(proxy Proxy) string {
 	return fmt.Sprintf("http://%s:%s", proxy.Host, proxy.Port)
 }
 
-func proxyStrToStruct(proxy string) Proxy {
+func StrToStruct(proxy string) TProxy {
 	userinfoAndHost := strings.SplitN(proxy, "@", 2)
 	var user = ""
 	var pass = ""
@@ -65,7 +65,7 @@ func proxyStrToStruct(proxy string) Proxy {
 		port = hostPort[1]
 	}
 
-	return Proxy{
+	return TProxy{
 		User: user,
 		Pass: pass,
 		Host: host,
@@ -73,7 +73,7 @@ func proxyStrToStruct(proxy string) Proxy {
 	}
 }
 
-func checkProxy(proxy Proxy) bool {
+func checkProxy(proxy TProxy) bool {
 	proxyStr := fmt.Sprintf("%s:%s", proxy.Host, proxy.Port)
 	proxyURL, _ := url.Parse(proxyStr)
 
@@ -93,8 +93,8 @@ func checkProxy(proxy Proxy) bool {
 	return err == nil && resp.StatusCode == 200
 }
 
-func GetProxy() Proxy {
-	var proxy Proxy
+func GetProxy() TProxy {
+	var proxy TProxy
 	checked := false
 
 	for checked == false {
