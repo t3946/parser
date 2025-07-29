@@ -210,19 +210,19 @@ func tryGenerateSession(text string, lr string, oldSession *Session) (Session, i
 
 func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	var session Session
-	var solvedCaptcha int
+	//var solvedCaptcha int
 	var err error
 
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
 
-	session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, nil)
+	//session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, nil)
 
 	if err != nil {
 		panic("Can't generate session: " + err.Error())
 	}
 
-	solvedCaptchaTotal += solvedCaptcha
+	solvedCaptchaTotal += 0
 	accessSuspended := 0
 	startTime := time.Now()
 	totalPages := 0
@@ -241,7 +241,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			}
 
 			if config.UseProxy {
-				proxyStr := fmt.Sprintf("http://%s:%s")
+				proxyStr := proxy.StructToStr(proxy.GetProxy(false))
 				options["proxy"] = map[string]string{
 					"proxyStr": proxyStr,
 				}
@@ -250,20 +250,20 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			html, resp, _ := httpRequest.GetCycleTls(url, &options)
 
 			if strings.Contains(resp.FinalUrl, "showcaptcha") {
-				page -= 1
-				session, solvedCaptcha, err = tryGenerateSession(keyword, lr, &session)
+				//page -= 1
+				//session, solvedCaptcha, err = tryGenerateSession(keyword, lr, &session)
 
-				if err != nil {
-					panic("Can't generate session: " + err.Error())
-				}
+				//if err != nil {
+				//	panic("Can't generate session: " + err.Error())
+				//}
 
-				solvedCaptchaTotal += solvedCaptcha
+				//solvedCaptchaTotal += 0
 				accessSuspended += 1
-				continue
+			} else {
+				log.Printf("[INFO] Parsed")
+				parsed = append(parsed, ParsePage(html, page)...)
 			}
 
-			log.Printf("[INFO] Parsed")
-			parsed = append(parsed, ParsePage(html, page)...)
 			totalPages += 1
 		}
 
@@ -303,7 +303,7 @@ func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, St
 	}
 
 	if config.UseProxy {
-		proxyStruct := proxy.GetProxy()
+		proxyStruct := proxy.GetProxy(true)
 		contextOptions.Proxy = &proxyStruct
 	}
 

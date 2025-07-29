@@ -31,7 +31,7 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int,
 	}
 
 	if config.UseProxy {
-		proxyStruct := proxy.GetProxy()
+		proxyStruct := proxy.GetProxy(true)
 		contextOptions.Proxy = &proxyStruct
 	}
 

@@ -93,13 +93,13 @@ func checkProxy(proxy TProxy) bool {
 	return err == nil && resp.StatusCode == 200
 }
 
-func GetProxy() TProxy {
+func GetProxy(check bool) TProxy {
 	var proxy TProxy
 	checked := false
 
 	for checked == false {
 		proxy = proxies[index]
-		checked = checkProxy(proxy)
+		checked = !check || checkProxy(proxy)
 		index += 1
 	}
 
