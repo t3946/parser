@@ -37,16 +37,19 @@ func main() {
 	sem := make(chan struct{}, config.Threads) // семафор с десятью слотами
 
 	var wg sync.WaitGroup
+	var i = 0
 
 	for chunk := range chunks {
+		i += 1
 		wg.Add(1)
-		go func(chunk []string) {
+
+		go func(idx int, chunk []string) {
 			defer wg.Done()
-			searchYandex.ParseKeywordsListRoutine(chunk, "46", resultsCh)
+			searchYandex.ParseKeywordsListRoutine(chunk, "46", resultsCh, idx)
 			sem <- struct{}{} // block slot
 
 			<-sem // free slot
-		}(chunk)
+		}(i, chunk)
 	}
 
 	// close channel

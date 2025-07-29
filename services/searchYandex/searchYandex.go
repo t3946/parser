@@ -208,7 +208,7 @@ func tryGenerateSession(text string, lr string, oldSession *Session) (Session, i
 	return session, solvedCaptcha, err
 }
 
-func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
+func ParseKeywordsList(keywords []string, lr string, idx int) ([]SERPItem, Stats) {
 	var session Session
 	//var solvedCaptcha int
 	var err error
@@ -233,7 +233,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			keyword := keywords[j]
 			url := GetSearchPageUrl(keyword, lr, page)
-			log.Printf("[INFO] Parse KW: `%v[%v]`", keyword, page)
+			log.Printf("[INFO] Parse KW: `%v[%v] (routine: %v)`", keyword, page, idx)
 			headers := GetHeaders()
 			headers["Cookie"] = CookieToString(session.Cookie)
 			options := map[string]map[string]string{
@@ -284,8 +284,8 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	return result, stats
 }
 
-func ParseKeywordsListRoutine(keywords []string, lr string, channel chan TResult) {
-	items, stats := ParseKeywordsList(keywords, lr)
+func ParseKeywordsListRoutine(keywords []string, lr string, channel chan TResult, idx int) {
+	items, stats := ParseKeywordsList(keywords, lr, idx)
 
 	result := TResult{
 		Items: items,

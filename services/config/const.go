@@ -7,7 +7,7 @@ const (
 	Headless                  = false
 	Deep                      = 1
 	TimeOutSec                = time.Second * 0
-	Threads                   = 5
-	KwNumber                  = 1
+	Threads                   = 10
+	KwNumber                  = 100
 	AttemptsToGenerateSession = 3
 )
