@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"parser/services/searchYandex"
 	"parser/services/storage"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,18 +22,15 @@ func init() {
 
 func main() {
 	//fetch sources data
-	dataJson := storage.ReadFile("test/100 keywords.json")
-	var kw []string
-	kwNumber := config.KwNumber
-	json.Unmarshal([]byte(dataJson), &kw)
-	kw = kw[0:kwNumber]
+	dataStr := storage.ReadFile("test/10000.txt")
+	kw := strings.Split(dataStr, "\n")[0:config.KwNumber]
 
 	//chunk source data
 	chunkSize := math.Ceil(float64(len(kw)) / float64(config.Threads))
 	chunks := slices.Chunk(kw, int(chunkSize))
 
 	//[start] process input data
-	log.Printf("[INFO] Parse %v keyword(s)", kwNumber)
+	log.Printf("[INFO] Parse %v keyword(s)", config.KwNumber)
 
 	startTime := time.Now()
 	resultsCh := make(chan searchYandex.TResult)
@@ -77,7 +74,7 @@ func main() {
 	//[end]
 
 	//output results
-	dir := fmt.Sprintf("load-kw-test-%v", kwNumber)
+	dir := fmt.Sprintf("parsed/load-kw-test-%v", config.KwNumber)
 	storage.WriteFile(dir+"/result.json", items)
 	storage.WriteFile(dir+"/stats.json", stats)
 }
