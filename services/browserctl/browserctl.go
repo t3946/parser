@@ -8,8 +8,6 @@ package browserCtl
 
 import (
 	"context"
-	"fmt"
-	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
@@ -45,8 +43,10 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 	)
 
 	if config.UseProxy && options.Proxy != nil {
-		urlStr := fmt.Sprintf("http://%s:%s", options.Proxy.Host, options.Proxy.Port)
-		opts = append(opts, chromedp.ProxyServer(urlStr))
+		opts = append(opts,
+			chromedp.ProxyServer(proxy.StructToStr(*options.Proxy)),
+			chromedp.Flag("proxy-bypass-list", "<-loopback>"),
+		)
 	}
 
 	allocCtx, cancelAlloc := chromedp.NewExecAllocator(parent, opts...)
@@ -55,32 +55,25 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 
 	if config.UseProxy && options.Proxy != nil && options.Proxy.User != "" {
 		chromedp.ListenTarget(ctx, func(ev interface{}) {
-			go func() {
-				switch ev := ev.(type) {
-				case *fetch.EventAuthRequired:
-					c := chromedp.FromContext(ctx)
-					execCtx := cdp.WithExecutor(ctx, c.Target)
-
-					resp := &fetch.AuthChallengeResponse{
-						Response: fetch.AuthChallengeResponseResponseProvideCredentials,
-						Username: options.Proxy.User,
-						Password: options.Proxy.Pass,
-					}
-
-					err := fetch.ContinueWithAuth(ev.RequestID, resp).Do(execCtx)
-					if err != nil {
-						log.Print(err)
-					}
-
-				case *fetch.EventRequestPaused:
-					c := chromedp.FromContext(ctx)
-					execCtx := cdp.WithExecutor(ctx, c.Target)
-					err := fetch.ContinueRequest(ev.RequestID).Do(execCtx)
-					if err != nil {
-						log.Print(err)
-					}
+			switch ev := ev.(type) {
+			case *fetch.EventAuthRequired:
+				if ev.AuthChallenge.Source == fetch.AuthChallengeSourceProxy {
+					go func() {
+						err := chromedp.Run(ctx, fetch.ContinueWithAuth(ev.RequestID, &fetch.AuthChallengeResponse{
+							Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+							Username: options.Proxy.User,
+							Password: options.Proxy.Pass,
+						}))
+						if err != nil {
+							log.Printf("auth error: %v", err)
+						}
+					}()
 				}
-			}()
+			case *fetch.EventRequestPaused:
+				go func() {
+					_ = chromedp.Run(ctx, fetch.ContinueRequest(ev.RequestID))
+				}()
+			}
 		})
 
 		err := chromedp.Run(ctx,
