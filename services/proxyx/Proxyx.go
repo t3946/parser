@@ -16,7 +16,7 @@ type TProxy struct {
 	Port string `json:"port"`
 }
 
-var index = 0
+var index = 10
 var proxies = []TProxy{}
 var testURL = "https://yandex.ru"
 var testTimeOutSec = 1

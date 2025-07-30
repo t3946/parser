@@ -19,10 +19,12 @@ type Session struct {
 }
 
 func GenerateSession(text string, lr string, proxy *proxyx.TProxy, oldSession *Session) (Session, int, error) {
+	var proxyStr = proxyx.StructToStr(*proxy)
+
 	if oldSession != nil {
-		log.Printf("[INFO] Retrust session")
+		log.Printf("[INFO] Retrust session (proxy=%v)", proxyStr)
 	} else {
-		log.Printf("[INFO] Generate new session")
+		log.Printf("[INFO] Generate new session (proxy=%v)", proxyStr)
 	}
 
 	contextOptions := browserCtl.GetContextOptions{
@@ -82,12 +84,20 @@ func SolveCaptcha(ctx context.Context) int {
 
 		log.Printf("[INFO] Solve smart captcha")
 
-		chromedp.Run(ctx,
+		timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*20)
+		defer cancel()
+
+		err := chromedp.Run(timeoutCtx,
 			chromedp.WaitVisible(".AdvancedCaptcha-ImageWrapper img"),
 			chromedp.WaitVisible(".AdvancedCaptcha-SilhouetteTask img"),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-ImageWrapper img').src", &clickImageUrl),
 			chromedp.Evaluate("document.querySelector('.AdvancedCaptcha-SilhouetteTask img').src", &taskImageUrl),
 		)
+
+		if err == context.DeadlineExceeded {
+			log.Printf("[WARN] Captcha solve deadline exceeded")
+			return 0
+		}
 
 		//[start] get solution Smart Captcha
 		task_id := capsola.SmartCaptchaCreateTask(clickImageUrl, taskImageUrl)
@@ -110,6 +120,8 @@ func SolveCaptcha(ctx context.Context) int {
 				`, &rect),
 		)
 
+		log.Printf("координаты получены")
+
 		// modify relative coords to absolute coords
 		for i := 0; i < len(solution_coords); i++ {
 			solution_coords[i].X += rect.Left
@@ -118,9 +130,13 @@ func SolveCaptcha(ctx context.Context) int {
 
 		chromedp.Run(ctx,
 			chromedp.MouseClickXY(solution_coords[0].X, solution_coords[0].Y),
+			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[1].X, solution_coords[1].Y),
+			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[2].X, solution_coords[2].Y),
+			chromedp.Sleep(time.Second),
 			chromedp.MouseClickXY(solution_coords[3].X, solution_coords[3].Y),
+			chromedp.Sleep(time.Second),
 			chromedp.Evaluate("document.querySelector('.CaptchaButton-ProgressWrapper').click()", &res),
 			chromedp.WaitReady("body"),
 			chromedp.Sleep(time.Second),

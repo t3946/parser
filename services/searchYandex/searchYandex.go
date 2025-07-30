@@ -189,23 +189,36 @@ func ParsePage(html string, page int) []SERPItem {
 	return result
 }
 
-func tryGenerateSession(text string, lr string, proxy *proxyx.TProxy, oldSession *Session) (Session, int, error) {
+func tryGenerateSession(text string, lr string, oldSession *Session) (Session, int, *proxyx.TProxy, error) {
 	var session Session
 	var solvedCaptcha int
 	var err error
+	var proxy *proxyx.TProxy
+
+	if config.UseProxy {
+		proxyStruct := proxyx.GetProxy()
+		proxy = &proxyStruct
+	}
 
 	for i := 1; i <= config.AttemptsToGenerateSession; i++ {
 		session, solvedCaptcha, err = GenerateSession(text, lr, proxy, oldSession)
 
 		if err != nil {
 			log.Printf("[WARN] " + err.Error())
+
+			//try another proxy
+			if config.UseProxy {
+				proxyStruct := proxyx.GetProxy()
+				proxy = &proxyStruct
+			}
+
 			continue
 		}
 
-		return session, solvedCaptcha, nil
+		return session, solvedCaptcha, proxy, nil
 	}
 
-	return session, solvedCaptcha, err
+	return session, solvedCaptcha, proxy, err
 }
 
 func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
@@ -214,14 +227,9 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	var err error
 	var proxy *proxyx.TProxy = nil
 
-	if config.UseProxy {
-		proxyStruct := proxyx.GetProxy()
-		proxy = &proxyStruct
-	}
-
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
-	session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, proxy, nil)
+	session, solvedCaptcha, proxy, err = tryGenerateSession(keywords[0], lr, nil)
 
 	if err != nil {
 		panic("Can't generate session: " + err.Error())
@@ -229,6 +237,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 	solvedCaptchaTotal += solvedCaptcha
 	accessSuspended := 0
+	loadingErrors := 0
 	startTime := time.Now()
 	totalPages := 0
 
@@ -253,7 +262,19 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			html, resp, _ := httpRequest.GetCycleTls(url, &options)
 
+			sessionInterrupted := false
+
 			if strings.Contains(resp.FinalUrl, "showcaptcha") {
+				sessionInterrupted = true
+			}
+
+			if resp.Status >= 400 {
+				log.Printf("[WARN] Page Load error (status: %v)", resp.Status)
+				sessionInterrupted = true
+			}
+
+			//generate new session
+			if sessionInterrupted {
 				page -= 1
 
 				if config.UseProxy {
@@ -261,7 +282,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 					proxy = &proxyStruct
 				}
 
-				session, solvedCaptcha, err = tryGenerateSession(keyword, lr, proxy, &session)
+				session, solvedCaptcha, proxy, err = tryGenerateSession(keyword, lr, &session)
 
 				if err != nil {
 					panic("Can't generate session: " + err.Error())
@@ -270,11 +291,6 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 				solvedCaptchaTotal += solvedCaptcha
 				accessSuspended += 1
 				continue
-			}
-
-			if resp.Status >= 400 {
-				log.Printf("[ERROR] Page Load error")
-				log.Panic(resp)
 			}
 
 			log.Printf("[INFO] Parsed")
