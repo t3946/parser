@@ -262,6 +262,11 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 				continue
 			}
 
+			if resp.Status >= 400 {
+				log.Printf("[ERROR] Page Load error")
+				log.Panic(resp)
+			}
+
 			log.Printf("[INFO] Parsed")
 			parsed = append(parsed, ParsePage(html, page)...)
 			totalPages += 1
