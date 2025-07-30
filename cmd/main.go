@@ -75,7 +75,7 @@ func main() {
 	//[end]
 
 	//output results
-	dir := fmt.Sprintf("load-kw-test-%v", config.KwNumber)
+	dir := fmt.Sprintf("parsed/load-kw-test-%v", config.KwNumber)
 	storage.WriteFile(dir+"/result.json", items)
 	storage.WriteFile(dir+"/stats.json", stats)
 }
