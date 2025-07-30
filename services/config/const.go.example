@@ -3,11 +3,11 @@ package config
 import "time"
 
 const (
-	UseProxy                  = false
-	Headless                  = false
+	UseProxy                  = true
+	Headless                  = true
 	Deep                      = 1
 	TimeOutSec                = time.Second * 0
-	Threads                   = 5
-	KwNumber                  = 10
+	Threads                   = 1
+	KwNumber                  = 1
 	AttemptsToGenerateSession = 3
 )

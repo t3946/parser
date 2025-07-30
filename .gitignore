@@ -1,6 +1,7 @@
 .idea
 .vscode
 .env
+services/config/const.go
 notes
 /cmd/test.go
 /storage/*
