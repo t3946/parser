@@ -88,9 +88,13 @@ func checkProxy(proxy TProxy) bool {
 
 	resp, err := client.Get(testURL)
 
+	if err != nil {
+		return false
+	}
+
 	defer resp.Body.Close()
 
-	return err == nil && resp.StatusCode == 200
+	return resp.StatusCode == 200
 }
 
 func GetProxy() TProxy {

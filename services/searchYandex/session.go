@@ -120,8 +120,6 @@ func SolveCaptcha(ctx context.Context) int {
 				`, &rect),
 		)
 
-		log.Printf("координаты получены")
-
 		// modify relative coords to absolute coords
 		for i := 0; i < len(solution_coords); i++ {
 			solution_coords[i].X += rect.Left
