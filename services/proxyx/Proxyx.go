@@ -100,7 +100,7 @@ func GetProxy() TProxy {
 	for checked == false {
 		proxy = proxies[index]
 		checked = checkProxy(proxy)
-		index += 1
+		index = (index + 1) % len(proxies)
 	}
 
 	return proxy
