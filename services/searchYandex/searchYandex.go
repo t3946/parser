@@ -12,7 +12,7 @@ import (
 	browserCtl "parser/services/browserctl"
 	"parser/services/config"
 	"parser/services/httpRequest"
-	"parser/services/proxy"
+	"parser/services/proxyx"
 	"strconv"
 	"strings"
 	"time"

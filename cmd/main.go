@@ -6,7 +6,7 @@ import (
 	"log"
 	"math"
 	"parser/services/config"
-	"parser/services/proxy"
+	"parser/services/proxyx"
 	"parser/services/searchYandex"
 	"parser/services/storage"
 	"slices"
