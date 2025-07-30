@@ -39,6 +39,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	for chunk := range chunks {
+		time.Sleep(time.Second * 3)
 		wg.Add(1)
 		go func(chunk []string) {
 			defer wg.Done()
