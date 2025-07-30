@@ -8,9 +8,8 @@ import (
 	"log"
 	browserCtl "parser/services/browserctl"
 	"parser/services/capsola"
-	"parser/services/config"
 	"parser/services/geometry"
-	"parser/services/proxy"
+	"parser/services/proxyx"
 	"strings"
 	"time"
 )
@@ -19,7 +18,7 @@ type Session struct {
 	Cookie []*network.Cookie
 }
 
-func GenerateSession(text string, lr string, oldSession *Session) (Session, int, error) {
+func GenerateSession(text string, lr string, proxy *proxyx.TProxy, oldSession *Session) (Session, int, error) {
 	if oldSession != nil {
 		log.Printf("[INFO] Retrust session")
 	} else {
@@ -30,9 +29,8 @@ func GenerateSession(text string, lr string, oldSession *Session) (Session, int,
 		Proxy: nil,
 	}
 
-	if config.UseProxy {
-		proxyStruct := proxy.GetProxy()
-		contextOptions.Proxy = &proxyStruct
+	if proxy != nil {
+		contextOptions.Proxy = proxy
 	}
 
 	ctx, cancelAll := browserCtl.GetContext(context.Background(), contextOptions)

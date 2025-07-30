@@ -13,7 +13,7 @@ import (
 	"github.com/chromedp/chromedp"
 	"log"
 	"parser/services/config"
-	"parser/services/proxy"
+	"parser/services/proxyx"
 	"parser/services/useragent"
 )
 
@@ -27,7 +27,7 @@ type SERPItem struct {
 }
 
 type GetContextOptions struct {
-	Proxy *proxy.TProxy
+	Proxy *proxyx.TProxy
 }
 
 func GetContext(parent context.Context, options GetContextOptions) (context.Context, context.CancelFunc) {
@@ -44,7 +44,7 @@ func GetContext(parent context.Context, options GetContextOptions) (context.Cont
 
 	if config.UseProxy && options.Proxy != nil {
 		opts = append(opts,
-			chromedp.ProxyServer(proxy.StructToStr(*options.Proxy)),
+			chromedp.ProxyServer(proxyx.StructToStr(*options.Proxy)),
 			chromedp.Flag("proxy-bypass-list", "<-loopback>"),
 		)
 	}

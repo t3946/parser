@@ -189,13 +189,13 @@ func ParsePage(html string, page int) []SERPItem {
 	return result
 }
 
-func tryGenerateSession(text string, lr string, oldSession *Session) (Session, int, error) {
+func tryGenerateSession(text string, lr string, proxy *proxyx.TProxy, oldSession *Session) (Session, int, error) {
 	var session Session
 	var solvedCaptcha int
 	var err error
 
 	for i := 1; i <= config.AttemptsToGenerateSession; i++ {
-		session, solvedCaptcha, err = GenerateSession(text, lr, oldSession)
+		session, solvedCaptcha, err = GenerateSession(text, lr, proxy, oldSession)
 
 		if err != nil {
 			log.Printf("[WARN] " + err.Error())
@@ -212,11 +212,16 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 	var session Session
 	var solvedCaptcha int
 	var err error
+	var proxy *proxyx.TProxy = nil
+
+	if config.UseProxy {
+		proxyStruct := proxyx.GetProxy()
+		proxy = &proxyStruct
+	}
 
 	result := []SERPItem{}
 	solvedCaptchaTotal := 0
-
-	session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, nil)
+	session, solvedCaptcha, err = tryGenerateSession(keywords[0], lr, proxy, nil)
 
 	if err != nil {
 		panic("Can't generate session: " + err.Error())
@@ -241,9 +246,8 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 			}
 
 			if config.UseProxy {
-				proxyStr := fmt.Sprintf("http://%s:%s")
 				options["proxy"] = map[string]string{
-					"proxyStr": proxyStr,
+					"proxyStr": proxyx.StructToStr(*proxy),
 				}
 			}
 
@@ -251,7 +255,13 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			if strings.Contains(resp.FinalUrl, "showcaptcha") {
 				page -= 1
-				session, solvedCaptcha, err = tryGenerateSession(keyword, lr, &session)
+
+				if config.UseProxy {
+					proxyStruct := proxyx.GetProxy()
+					proxy = &proxyStruct
+				}
+
+				session, solvedCaptcha, err = tryGenerateSession(keyword, lr, proxy, &session)
 
 				if err != nil {
 					panic("Can't generate session: " + err.Error())
@@ -308,7 +318,7 @@ func ParseKeywordsListWithChromeDP(keywords []string, lr string) ([]SERPItem, St
 	}
 
 	if config.UseProxy {
-		proxyStruct := proxy.GetProxy()
+		proxyStruct := proxyx.GetProxy()
 		contextOptions.Proxy = &proxyStruct
 	}
 

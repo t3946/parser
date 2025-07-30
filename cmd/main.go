@@ -17,7 +17,7 @@ import (
 
 func init() {
 	godotenv.Load()
-	proxy.Init()
+	proxyx.Init()
 }
 
 func main() {
