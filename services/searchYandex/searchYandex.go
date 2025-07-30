@@ -162,7 +162,7 @@ func GetHeaders() map[string]string {
 		"sec-ch-ua":                 "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"Google Chrome\";v=\"138\"",
 		"sec-ch-ua-mobile":          "?0",
 		"sec-ch-ua-platform":        "Windows",
-		"Referer":                   "https://yandex.ru/",
+		"Referer":                   "https://ya.ru/",
 	}
 }
 
