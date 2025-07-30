@@ -31,6 +31,7 @@ type Stats struct {
 	TotalPages         int    `json:"total_pages_loaded"`
 	TotalCaptchaSolved int    `json:"total_captcha_solved"`
 	AccessSuspended    int    `json:"access_suspended"`
+	LoadingErrors      int    `json:"loading_errors"`
 	TimeSpend          string `json:"time_spent"`
 }
 
@@ -270,6 +271,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 
 			if resp.Status >= 400 {
 				log.Printf("[WARN] Page Load error (status: %v)", resp.Status)
+				loadingErrors += 1
 				sessionInterrupted = true
 			}
 
@@ -310,6 +312,7 @@ func ParseKeywordsList(keywords []string, lr string) ([]SERPItem, Stats) {
 		TotalCaptchaSolved: solvedCaptchaTotal,
 		TimeSpend:          fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds),
 		AccessSuspended:    accessSuspended,
+		LoadingErrors:      loadingErrors,
 	}
 
 	return result, stats
